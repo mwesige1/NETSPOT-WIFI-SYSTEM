@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard — NETSPOT</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0f1e; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { text-align: center; padding: 40px; }
+        h1 { color: #F5A623; font-size: 2rem; margin-bottom: 16px; }
+        p { color: #aaa; }
+        a { color: #F5A623; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>⚡ Welcome to NETSPOT</h1>
+        <p>You are logged in as {{ request.user.username }}</p>
+        <p style="margin-top:16px;"><a href="/logout/">Logout</a></p>
+    </div>
+</body>
+</html>

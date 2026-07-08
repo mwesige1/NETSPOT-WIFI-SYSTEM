@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Tenants — NETSPOT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0f1e; color: #fff; }
+        .sidebar {
+            width: 240px; height: 100vh; background: #111827;
+            position: fixed; padding: 24px 0;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .logo { padding: 0 24px 24px; font-size: 1.4rem; font-weight: 700; color: #F5A623; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .nav a {
+            display: block; padding: 12px 24px;
+            color: #aaa; text-decoration: none; font-size: 0.9rem;
+        }
+        .nav a:hover, .nav a.active { color: #F5A623; }
+        .main { margin-left: 240px; padding: 32px; }
+        .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 16px; font-size: 0.8rem; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        td { padding: 14px 16px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-trial { background: rgba(245,166,35,0.1); color: #F5A623; }
+        .badge-active { background: rgba(34,197,94,0.1); color: #22C55E; }
+        .badge-pending { background: rgba(99,102,241,0.1); color: #818CF8; }
+        .badge-awaiting_approval { background: rgba(99,102,241,0.1); color: #818CF8; }
+        .badge-suspended { background: rgba(239,68,68,0.1); color: #EF4444; }
+        .badge-terminated { background: rgba(107,114,128,0.1); color: #6B7280; }
+        .empty { text-align: center; color: #aaa; padding: 60px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">⚡ NETSPOT</div>
+        <nav class="nav">
+            <a href="{% url 'superadmin:dashboard' %}">Dashboard</a>
+            <a href="{% url 'superadmin:applications' %}">Applications</a>
+            <a href="{% url 'superadmin:tenant_list' %}" class="active">All Tenants</a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <div class="page-title">All Tenants</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Business</th>
+                    <th>Type</th>
+                    <th>Email</th>
+                    <th>Schema</th>
+                    <th>Status</th>
+                    <th>Trial Ends</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tenant in tenants %}
+                <tr>
+                    <td>{{ tenant.business_name }}</td>
+                    <td>{{ tenant.get_business_type_display }}</td>
+                    <td>{{ tenant.email }}</td>
+                    <td style="font-family:monospace;font-size:12px;color:#aaa;">{{ tenant.schema_name }}</td>
+                    <td><span class="badge badge-{{ tenant.status }}">{{ tenant.get_status_display }}</span></td>
+                    <td>{% if tenant.trial_end %}{{ tenant.trial_end|date:"d M Y" }}{% else %}—{% endif %}</td>
+                    <td>{{ tenant.created_at|date:"d M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="empty">No tenants yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -25,7 +25,12 @@ SECRET_KEY = 'django-insecure-j)oah0qk*@(^)yof4erq$6&av53=hn1gf=4wde34o2w(ylj-41
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'kevidtechhotspot.com',
+    '.kevidtechhotspot.com',  # The dot prefix allows ALL subdomains
+    'localhost',
+    '127.0.0.1',
+]
 
 
 # Application definition
@@ -39,6 +44,7 @@ SHARED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'superadmin'
 ]
 
 TENANT_APPS = [
@@ -70,7 +76,7 @@ ROOT_URLCONF = 'netspot.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -143,9 +149,31 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+PUBLIC_SCHEMA_URLCONF  = 'netspot.urls'
+ROOT_URLCONF           = 'netspot.urls_tenant'
 
 
 # ── django-tenants configuration ──────────────────────
 TENANT_MODEL = "tenants.Tenant"
 TENANT_DOMAIN_MODEL = "tenants.Domain"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+# ── Email Configuration ────────────────────────────
+EMAIL_BACKEND    = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST       = 'smtp.gmail.com'
+EMAIL_PORT       = 587
+EMAIL_USE_TLS    = True
+EMAIL_HOST_USER  = 'your@gmail.com'
+EMAIL_HOST_PASSWORD = 'your_app_password'
+DEFAULT_FROM_EMAIL  = 'NETSPOT <noreply@kevidtechhotspot.com>'
+
+# ── Platform Settings ──────────────────────────────
+PLATFORM_DOMAIN = 'kevidtechhotspot.com'
+PLATFORM_PORT   = '8000'

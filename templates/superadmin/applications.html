@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications — NETSPOT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0f1e; color: #fff; }
+        .sidebar {
+            width: 240px; height: 100vh; background: #111827;
+            position: fixed; padding: 24px 0;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .logo { padding: 0 24px 24px; font-size: 1.4rem; font-weight: 700; color: #F5A623; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .nav a {
+            display: block; padding: 12px 24px;
+            color: #aaa; text-decoration: none; font-size: 0.9rem;
+        }
+        .nav a:hover, .nav a.active { color: #F5A623; }
+        .main { margin-left: 240px; padding: 32px; }
+        .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; }
+        .app-card {
+            background: #111827; border-radius: 12px;
+            padding: 24px; margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .app-info h3 { font-size: 1rem; margin-bottom: 4px; }
+        .app-info p { font-size: 0.82rem; color: #aaa; margin-bottom: 2px; }
+        .app-actions { display: flex; gap: 10px; }
+        .btn-approve {
+            padding: 10px 20px; background: #22C55E; color: #fff;
+            border: none; border-radius: 8px; cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; text-decoration: none;
+        }
+        .btn-reject {
+            padding: 10px 20px; background: transparent;
+            border: 1px solid #EF4444; color: #EF4444;
+            border-radius: 8px; cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; text-decoration: none;
+        }
+        .empty { text-align: center; color: #aaa; padding: 60px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">⚡ NETSPOT</div>
+        <nav class="nav">
+            <a href="{% url 'superadmin:dashboard' %}">Dashboard</a>
+            <a href="{% url 'superadmin:applications' %}" class="active">Applications</a>
+            <a href="{% url 'superadmin:tenant_list' %}">All Tenants</a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <div class="page-title">Pending Applications</div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div style="background:rgba(245,166,35,0.1);border:1px solid #F5A623;color:#F5A623;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% for app in applications %}
+        <div class="app-card">
+            <div class="app-info">
+                <h3>{{ app.business_name }}</h3>
+                <p>📧 {{ app.email }}</p>
+                <p>📞 {{ app.phone }}</p>
+                <p>📍 {{ app.location }}</p>
+                <p>🏢 {{ app.get_business_type_display }}</p>
+                <p style="color:#818CF8;margin-top:6px;">Applied: {{ app.created_at|date:"d M Y, H:i" }}</p>
+            </div>
+            <div class="app-actions">
+                <a href="{% url 'superadmin:approve' app.id %}" class="btn-approve">✓ Approve</a>
+                <a href="{% url 'superadmin:reject' app.id %}" class="btn-reject">✗ Reject</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty">No pending applications.</div>
+        {% endfor %}
+    </div>
+</body>
+</html>

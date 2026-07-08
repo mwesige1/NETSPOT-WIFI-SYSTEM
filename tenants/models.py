@@ -62,6 +62,11 @@ class Tenant(TenantMixin):
     created_at        = models.DateTimeField(auto_now_add=True)
     updated_at        = models.DateTimeField(auto_now=True)
 
+
+    # ── Email Verification ─────────────────────────────
+    email_verified    = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=100, blank=True)
+
     # django-tenants requires this — auto creates schema on save
     auto_create_schema = True
 
