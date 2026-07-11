@@ -1,0 +1,75 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>Wallet</h5>
+        <p>Your earnings after commission, and full transaction history</p>
+    </div>
+</div>
+
+<!-- Reusing .balance-banner — already styled for withdrawals.html -->
+<div class="balance-banner">
+    <div>
+        <p class="balance-label">Wallet Balance</p>
+        <h2 class="balance-value">UGX {{ wallet_balance|floatformat:2 }}</h2>
+        <p class="balance-sub">
+            {% if wallet_balance <= minimum_balance %}
+                ⚠ Below minimum withdrawal threshold (UGX {{ minimum_balance }})
+            {% else %}
+                Available for withdrawal
+            {% endif %}
+        </p>
+    </div>
+    <div>
+        <button class="btn btn-outline" disabled title="Withdrawal system coming soon">
+            Withdraw — Coming Soon
+        </button>
+    </div>
+</div>
+
+<div class="dash-table">
+    <div class="dash-table-header">
+        <h6>Transaction History</h6>
+    </div>
+
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Reason</th>
+                    <th class="col-order">Order Ref</th>
+                    <th>Amount</th>
+                    <th>Balance After</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.created_at|date:"d M Y, H:i" }}</td>
+                    <td>
+                        {% if t.transaction_type == 'credit' %}
+                            <span class="badge-active-dot"><span class="dot"></span>Credit</span>
+                        {% else %}
+                            <span class="badge badge-danger">Debit</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ t.get_reason_display }}</td>
+                    <td class="col-order">{{ t.order_id|default:"—" }}</td>
+                    <td class="{% if t.transaction_type == 'credit' %}text-success{% else %}text-danger{% endif %} font-semibold">
+                        {% if t.transaction_type == 'credit' %}+{% else %}-{% endif %}UGX {{ t.amount|floatformat:2 }}
+                    </td>
+                    <td class="font-semibold">UGX {{ t.balance_after|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">No transactions yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

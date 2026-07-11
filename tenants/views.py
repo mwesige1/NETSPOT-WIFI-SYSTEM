@@ -116,3 +116,4 @@ def verify_email(request, token):
         'We will contact you within 24 hours.'
     )
     return redirect('tenants:landing')
+    

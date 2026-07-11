@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from tenants.models import Tenant, Domain
+from django.db.models import Sum
 
 
 def is_superadmin(user):
@@ -15,26 +16,63 @@ def is_superadmin(user):
 @login_required
 @user_passes_test(is_superadmin)
 def dashboard(request):
-    """
-    Super admin platform overview.
-    Shows key metrics across all tenants.
-    """
-    total_tenants     = Tenant.objects.exclude(schema_name='public').count()
-    pending_count     = Tenant.objects.filter(status='awaiting_approval').count()
-    active_count      = Tenant.objects.filter(status='active').count()
-    trial_count       = Tenant.objects.filter(status='trial').count()
-    suspended_count   = Tenant.objects.filter(status='suspended').count()
-    recent_tenants    = Tenant.objects.exclude(
-                            schema_name='public'
-                        ).order_by('-created_at')[:5]
+    from django_tenants.utils import schema_context
+    from tenants.models import Tenant
+
+    total_tenants   = Tenant.objects.exclude(schema_name='public').count()
+    pending_count   = Tenant.objects.filter(status='awaiting_approval').count()
+    active_count    = Tenant.objects.filter(status='active').count()
+    trial_count     = Tenant.objects.filter(status='trial').count()
+    suspended_count = Tenant.objects.filter(status='suspended').count()
+    recent_tenants  = Tenant.objects.exclude(
+                        schema_name='public'
+                      ).order_by('-created_at')[:5]
+
+    # ── Aggregate metrics across ALL tenant schemas ────
+    total_revenue    = 0
+    total_commission = 0
+    total_sessions   = 0
+
+    active_tenants = Tenant.objects.exclude(
+        schema_name='public'
+    ).filter(status__in=['active', 'trial'])
+
+    for tenant in active_tenants:
+        with schema_context(tenant.schema_name):
+            from payments.models import Order
+            from portal.models import WiFiSession
+            from decimal import Decimal
+
+            # Revenue — sum of all successful orders
+            tenant_revenue = Order.objects.filter(
+                status='success'
+            ).aggregate(
+                total=Sum('amount')
+            )['total'] or 0
+
+            # Commission — percentage of revenue
+            commission_rate = tenant.commission_rate / Decimal('100')
+            tenant_commission = Decimal(str(tenant_revenue)) * commission_rate
+
+            # Active sessions
+            tenant_sessions = WiFiSession.objects.filter(
+                status='active'
+            ).count()
+
+            total_revenue    += float(tenant_revenue)
+            total_commission += float(tenant_commission)
+            total_sessions   += tenant_sessions
 
     return render(request, 'superadmin/dashboard.html', {
-        'total_tenants'  : total_tenants,
-        'pending_count'  : pending_count,
-        'active_count'   : active_count,
-        'trial_count'    : trial_count,
-        'suspended_count': suspended_count,
-        'recent_tenants' : recent_tenants,
+        'total_tenants'   : total_tenants,
+        'pending_count'   : pending_count,
+        'active_count'    : active_count,
+        'trial_count'     : trial_count,
+        'suspended_count' : suspended_count,
+        'recent_tenants'  : recent_tenants,
+        'total_revenue'   : total_revenue,
+        'total_commission': total_commission,
+        'total_sessions'  : total_sessions,
     })
 
 

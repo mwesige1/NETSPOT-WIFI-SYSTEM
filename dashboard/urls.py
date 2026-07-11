@@ -393,6 +393,8 @@ urlpatterns = [
         views.record_payment,
         name='record_payment'
     ),
+    # ── Tenants Wallet ─────────────────────────────────
+    path('wallet/', views.wallet_view, name='wallet'),
 
   
 ]

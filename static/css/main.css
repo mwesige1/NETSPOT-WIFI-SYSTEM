@@ -3023,3 +3023,22 @@ table { border-collapse: collapse; width: 100%; }
         display: table-cell;
     }
 }
+
+/* ============================================
+   PAGE: dashboard/wallet.html
+   ============================================ */
+
+/* ── Wallet Table — Mobile Columns ────────── */
+.col-order {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .col-order {
+        display: table-cell;
+    }
+}
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

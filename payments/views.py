@@ -8,6 +8,7 @@ from datetime import timedelta
 from portal.models import Package, Device, WiFiSession
 from payments.models import Order, Voucher
 from . import mtn, airtel, iotec
+from django.db import connection
 
 
 
@@ -256,6 +257,38 @@ def payment_status(request, order_id):
         # Update device total spending for analytics
         order.device.total_spent += order.amount
         order.device.save()
+
+
+
+        # Update device total spending for analytics
+        order.device.total_spent += order.amount
+        order.device.save()
+
+        # ── Deduct platform commission ─────────────────
+        try:
+            from django_tenants.utils import schema_context
+            from django.db import connection
+            from tenants.models import Tenant
+            from superadmin.utils import deduct_commission
+
+            current_schema = connection.schema_name
+
+            with schema_context('public'):
+                tenant = Tenant.objects.get(schema_name=current_schema)
+
+                if not (tenant.status == 'trial' and not tenant.trial_commission):
+                    deduct_commission(
+                        tenant       = tenant,
+                        order_id     = order.id,
+                        gross_amount = order.amount,
+                    )
+                    print(f"✅ Commission deducted for {tenant.business_name}")
+
+        except Exception as e:
+            print(f"Commission deduction error: {e}")
+
+        # Get customer's real IP address
+        ip_address = order.ip_address or get_client_ip(request)
 
         # Get customer's real IP address
         # Mikrotik sometimes passes its own IP so we check
@@ -533,6 +566,29 @@ def iotec_callback(request):
         order.momo_txn_id = iotec_txn_id
         order.save()
 
+
+            # ── Deduct platform commission ─────────────────
+        try:
+            from django_tenants.utils import schema_context, get_tenant
+            from django.db import connection
+            from tenants.models import Tenant
+            from superadmin.utils import deduct_commission
+
+            current_schema = connection.schema_name
+            
+            with schema_context('public'):
+                tenant = Tenant.objects.get(schema_name=current_schema)
+                
+                if not (tenant.status == 'trial' and not tenant.trial_commission):
+                    deduct_commission(
+                        tenant       = tenant,
+                        order_id     = order.id,
+                        gross_amount = order.amount,
+                    )
+                    print(f"✅ Commission deducted for {tenant.business_name}")
+
+        except Exception as e:
+            print(f"Commission deduction error: {e}")
         # Update device total spending
         order.device.total_spent += order.amount
         order.device.save()
@@ -844,6 +900,30 @@ def buy_voucher_status(request, order_id):
     if provider_status == 'success':
         order.status = 'success'
         order.save()
+
+        # ── Deduct platform commission ─────────────────
+        try:
+            from django_tenants.utils import schema_context
+            from django.db import connection
+            from tenants.models import Tenant
+            from superadmin.utils import deduct_commission
+
+            current_schema = connection.schema_name
+
+            with schema_context('public'):
+                tenant = Tenant.objects.get(schema_name=current_schema)
+
+                if not (tenant.status == 'trial' and not tenant.trial_commission):
+                    deduct_commission(
+                        tenant       = tenant,
+                        order_id     = order.id,
+                        gross_amount = order.amount,
+                    )
+                    print(f"✅ Commission deducted for {tenant.business_name}")
+
+        except Exception as e:
+            print(f"Commission deduction error: {e}")
+
         # Recursive call to generate voucher
         return buy_voucher_status(request, order_id)
 

@@ -349,7 +349,7 @@
 
     var phone = isFree ? '0000000000' : document.getElementById('directPhone').value.trim();
 
-    fetch('https://kevidtechhotspot.com/payments/initiate/', {
+    fetch('/payments/initiate/', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
       body: JSON.stringify({
@@ -374,12 +374,12 @@
 
           setTimeout(function() {
             var img = new Image();
-            img.onload  = function() { window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac; };
-            img.onerror = function() { window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac; };
+            img.onload  = function() { window.location.href = '/connected/?mac=' + mac; };
+            img.onerror = function() { window.location.href = '/connected/?mac=' + mac; };
             img.src = 'http://connectivitycheck.gstatic.com/generate_204?t=' + Date.now();
 
             setTimeout(function() {
-              window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac;
+              window.location.href = '/connected/?mac=' + mac;
             }, 1500);
           }, 1000);
 
@@ -403,7 +403,7 @@
   function pollDirectStatus(orderId) {
     var mac = '{{ mac_address }}';
     var iv  = setInterval(function() {
-      fetch('https://kevidtechhotspot.com/payments/status/' + orderId + '/')
+      fetch('/payments/status/' + orderId + '/')
       .then(function(r) { return r.json(); })
       .then(function(data) {
         
@@ -418,13 +418,13 @@
             // Android checks generate_204, iOS/macOS checks hotspot-detect.html
             setTimeout(function() {
               var img = new Image();
-              img.onload  = function() { window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac; };
-              img.onerror = function() { window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac; };
+              img.onload  = function() { window.location.href = '/connected/?mac=' + mac; };
+              img.onerror = function() { window.location.href = '/connected/?mac=' + mac; };
               img.src = 'http://connectivitycheck.gstatic.com/generate_204?t=' + Date.now();
 
               // Fallback redirect regardless, in case image check hangs
               setTimeout(function() {
-                window.location.href = 'https://kevidtechhotspot.com/connected/?mac=' + mac;
+                window.location.href = '/connected/?mac=' + mac;
               }, 1500);
             }, 1000);
 
@@ -473,7 +473,7 @@
     btnTxt.textContent    = 'Processing...';
     spinner.style.display = 'block';
 
-    fetch('https://kevidtechhotspot.com/payments/buy-voucher/', {
+    fetch('/payments/buy-voucher/', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
       body: JSON.stringify({
@@ -507,7 +507,7 @@
       '<div class="r-info"><div>📱</div><strong>Check Your Phone</strong>Enter your PIN to confirm payment</div>';
 
     var iv = setInterval(function() {
-      fetch('https://kevidtechhotspot.com/payments/buy-voucher/status/' + orderId + '/')
+      fetch('/payments/buy-voucher/status/' + orderId + '/')
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.status === 'success') {
@@ -613,7 +613,7 @@ function quickRedeemVoucher() {
   var btn = document.querySelector('.quick-voucher-btn');
   btn.textContent = '...';
 
-  fetch('https://kevidtechhotspot.com/payments/redeem-voucher/', {
+  fetch('/payments/redeem-voucher/', {
     method : 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
     body: JSON.stringify({
@@ -660,7 +660,7 @@ function quickRedeemVoucher() {
     btnTxt.textContent    = 'Connecting...';
     spinner.style.display = 'block';
 
-    fetch('https://kevidtechhotspot.com/payments/redeem-voucher/', {
+    fetch('/payments/redeem-voucher/', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
       body: JSON.stringify({

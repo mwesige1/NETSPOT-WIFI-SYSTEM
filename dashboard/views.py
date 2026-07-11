@@ -19,6 +19,13 @@ from network.models import MikroTikRouter
 from django.db.models import Count, Sum, Q
 from django.contrib import messages
 
+
+
+
+from django_tenants.utils import schema_context
+from superadmin.models import WalletTransaction
+
+
 # ── Authentication Views ───────────────────────────────────
 
 def dashboard_login(request):
@@ -2364,3 +2371,22 @@ def edit_expense(request, expense_id):
     return render(request, 'dashboard/edit_expense.html', {
         'expense': expense,
     })
+
+
+
+@login_required
+def wallet_view(request):
+    tenant = request.tenant
+
+    # WalletTransaction lives in the public schema, so we query it explicitly
+    with schema_context('public'):
+        transactions = WalletTransaction.objects.filter(
+            tenant=tenant
+        ).order_by('-created_at')
+
+    context = {
+        'wallet_balance': tenant.wallet_balance,
+        'transactions': transactions,
+        'minimum_balance': 5000,
+    }
+    return render(request, 'dashboard/wallet.html', context)

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,17 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j)oah0qk*@(^)yof4erq$6&av53=hn1gf=4wde34o2w(ylj-41'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-changeme')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = [
-    'kevidtechhotspot.com',
-    '.kevidtechhotspot.com',  # The dot prefix allows ALL subdomains
-    'localhost',
-    '127.0.0.1',
-]
+DEBUG = config('DEBUG', cast=bool, default=True)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -44,7 +40,8 @@ SHARED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'superadmin'
+    'superadmin',
+    'django.contrib.humanize',
 ]
 
 TENANT_APPS = [
@@ -101,17 +98,18 @@ DATABASE_ROUTERS = (
 )
 
 
+
+
 DATABASES = {
     'default': {
         'ENGINE'  : 'django_tenants.postgresql_backend',
-        'NAME'    : 'netspot_db',
-        'USER'    : 'netspot_user',
-        'PASSWORD': '@Developer22',
-        'HOST'    : 'localhost',
-        'PORT'    : '5432',
+        'NAME'    : config('DATABASE_NAME', default='netspot_db'),
+        'USER'    : config('DATABASE_USER', default='netspot_user'),
+        'PASSWORD': config('DATABASE_PASSWORD', default='netspot_pass'),
+        'HOST'    : config('DATABASE_HOST', default='localhost'),
+        'PORT'    : config('DATABASE_PORT', default='5432'),
     }
 }
-
 
 
 # Password validation
@@ -174,6 +172,26 @@ EMAIL_HOST_USER  = 'your@gmail.com'
 EMAIL_HOST_PASSWORD = 'your_app_password'
 DEFAULT_FROM_EMAIL  = 'NETSPOT <noreply@kevidtechhotspot.com>'
 
+
+
+# ── IOTEC Pay ──────────────────────────────────────────
+IOTEC_CLIENT_ID     = config('IOTEC_CLIENT_ID', default='')
+IOTEC_CLIENT_SECRET = config('IOTEC_CLIENT_SECRET', default='')
+IOTEC_WALLET_ID     = config('IOTEC_WALLET_ID', default='')
+IOTEC_BASE_URL      = config('IOTEC_BASE_URL', default='https://pay.iotec.io')
+IOTEC_AUTH_URL      = config('IOTEC_AUTH_URL', default='https://id.iotec.io/connect/token')
+IOTEC_CALLBACK_URL  = config('IOTEC_CALLBACK_URL', default='')
+
 # ── Platform Settings ──────────────────────────────
 PLATFORM_DOMAIN = 'kevidtechhotspot.com'
 PLATFORM_PORT   = '8000'
+
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://kevidtechhotspot.com:8000',
+    'http://*.kevidtechhotspot.com:8000',
+]
