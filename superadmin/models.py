@@ -85,3 +85,42 @@ class WalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.tenant.schema_name} — {self.transaction_type} UGX {self.amount}"
+    
+
+
+class WithdrawalRequest(models.Model):
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (APPROVED, 'Approved'),
+        (COMPLETED, 'Completed'),
+        (FAILED, 'Failed'),
+        (CANCELLED, 'Cancelled'),
+    ]
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='withdrawal_requests'
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    phone_number = models.CharField(max_length=15)
+    provider = models.CharField(max_length=10, choices=[('mtn', 'MTN'), ('airtel', 'Airtel')])
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+
+    iotec_txn_id = models.CharField(max_length=100, blank=True)
+    failure_reason = models.CharField(max_length=255, blank=True)
+
+    requested_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"{self.tenant.schema_name} — UGX {self.amount} ({self.status})"

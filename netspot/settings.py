@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from decimal import Decimal
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -195,3 +196,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://kevidtechhotspot.com:8000',
     'http://*.kevidtechhotspot.com:8000',
 ]
+
+# Withdrawals below this amount are auto-approved and disbursed immediately.
+# Amounts at or above this threshold require manual super admin approval.
+AUTO_APPROVAL_WITHDRAWAL_THRESHOLD = Decimal('50000')

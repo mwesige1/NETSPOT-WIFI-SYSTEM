@@ -221,31 +221,7 @@ urlpatterns = [
         name='edit_expense'
     ),
 
-    # ── Withdrawals ────────────────────────────────────
-    # All withdrawal requests
-    path(
-        'withdrawals/',
-        views.withdrawals,
-        name='withdrawals'
-    ),
-    # Create new withdrawal request
-    path(
-        'withdrawals/create/',
-        views.create_withdrawal,
-        name='create_withdrawal'
-    ),
-    # Update withdrawal status
-    path(
-        'withdrawals/<int:withdrawal_id>/update/',
-        views.update_withdrawal_status,
-        name='update_withdrawal_status'
-    ),
-    # Delete withdrawal
-    path(
-        'withdrawals/<int:withdrawal_id>/delete/',
-        views.delete_withdrawal,
-        name='delete_withdrawal'
-    ),
+    
 
     # ── Leads ──────────────────────────────────────────
     # All leads in pipeline
@@ -393,8 +369,10 @@ urlpatterns = [
         views.record_payment,
         name='record_payment'
     ),
-    # ── Tenants Wallet ─────────────────────────────────
+    
+  # ── Tenant Wallet & Withdrawals ─────────────────────
     path('wallet/', views.wallet_view, name='wallet'),
-
-  
+    path('withdrawals/', views.withdrawals_view, name='withdrawals'),
+    path('withdrawals/create/', views.create_withdrawal_view, name='create_withdrawal'),
+    path('withdrawals/<int:withdrawal_id>/cancel/', views.cancel_withdrawal_view, name='cancel_withdrawal'),
 ]

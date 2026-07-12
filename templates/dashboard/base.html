@@ -132,6 +132,12 @@
                 Voucher Agents
             </a>
 
+            <a href="{% url 'dashboard:wallet' %}"
+                class="nav-item {% if request.resolver_match.url_name == 'wallet' %}active{% endif %}">
+                    <i class="bi bi-wallet2"></i>
+                    Wallet
+                </a>
+
             <a href="{% url 'dashboard:withdrawals' %}"
                class="nav-item {% if request.resolver_match.url_name == 'withdrawals' or request.resolver_match.url_name == 'create_withdrawal' %}active{% endif %}">
                 <i class="bi bi-arrow-up-circle-fill"></i>

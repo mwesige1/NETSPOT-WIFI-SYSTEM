@@ -18,12 +18,14 @@ from dashboard.models import (
 from network.models import MikroTikRouter
 from django.db.models import Count, Sum, Q
 from django.contrib import messages
+from django.db import connection
 
 
 
 
 from django_tenants.utils import schema_context
 from superadmin.models import WalletTransaction
+from superadmin.utils import request_withdrawal
 
 
 # ── Authentication Views ───────────────────────────────────
@@ -168,18 +170,17 @@ def overview(request):
         status='active'
     ).order_by('-created_at')[:5]
 
-    # ── Mobile Money Balance ───────────────────────────
+   # ── Mobile Money Balance ───────────────────────────
+    current_schema = connection.schema_name  # capture BEFORE switching to public
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        public_tenant = Tenant.objects.get(schema_name=current_schema)
+        momo_balance = public_tenant.wallet_balance
+
     total_collected = Order.objects.filter(
         status='success'
     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    total_withdrawn = Withdrawal.objects.filter(
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    from payments import iotec
-    real_balance = iotec.get_wallet_balance()
-    momo_balance = real_balance if real_balance is not None else total_collected - total_withdrawn
 
     # ── Additional Stats ───────────────────────────────
     available_vouchers = Voucher.objects.filter(
@@ -248,7 +249,6 @@ def overview(request):
         'recent_sessions'   : recent_sessions,
         'momo_balance'      : momo_balance,
         'total_collected'   : total_collected,
-        'total_withdrawn'   : total_withdrawn,
         'now'               : now,
         'available_vouchers': available_vouchers,
         'total_equipment'   : total_equipment,
@@ -1084,148 +1084,42 @@ def create_expense(request):
 # ── Withdrawals ────────────────────────────────────────────
 
 @login_required
-def withdrawals(request):
+def create_withdrawal_view(request):
     """
-    Shows all withdrawal requests with summary cards.
-    Admin can request new withdrawals of collected
-    mobile money balance.
+    Tenant-facing withdrawal request form.
+    Uses request_withdrawal() to enforce minimum balance,
+    24-hour restriction, and auto-approval threshold.
     """
+    tenant = request.tenant
 
-    now       = timezone.now()
-    month_ago = now - timedelta(days=30)
+    with schema_context('public'):
+        from tenants.models import Tenant
+        public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+        wallet_balance = public_tenant.wallet_balance
 
-    # Calculate available balance
-    total_collected = Order.objects.filter(
-        status='success'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+        if request.method == 'POST':
+            amount = request.POST.get('amount')
+            phone_number = request.POST.get('phone_number')
+            provider = request.POST.get('provider')
 
-    total_withdrawn = Withdrawal.objects.filter(
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    from payments import iotec
-    real_balance      = iotec.get_wallet_balance()
-    available_balance = real_balance if real_balance is not None else total_collected - total_withdrawn
-
-    # Status counts
-    pending_count   = Withdrawal.objects.filter(status='pending').count()
-    completed_count = Withdrawal.objects.filter(status='completed').count()
-
-    # Status filter
-    status_filter = request.GET.get('status', '')
-
-    # All withdrawal records
-    withdrawals_qs = Withdrawal.objects.all().order_by('-created_at')
-
-    if status_filter:
-        withdrawals_qs = withdrawals_qs.filter(status=status_filter)
-
-    return render(request, 'dashboard/withdrawals.html', {
-        'withdrawals'        : withdrawals_qs,
-        'momo_balance'       : available_balance,
-        'total_collected'    : total_collected,
-        'total_withdrawn'    : total_withdrawn,
-        'pending_count'      : pending_count,
-        'completed_count'    : completed_count,
-        'status_filter'      : status_filter,
-    })
-
-@login_required
-def create_withdrawal(request):
-    """
-    Creates a new withdrawal request.
-    """
-
-    total_collected = Order.objects.filter(
-        status='success'
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    total_withdrawn = Withdrawal.objects.filter(
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    momo_balance = total_collected - total_withdrawn
-
-    recent_withdrawals = Withdrawal.objects.order_by('-created_at')[:5]
-
-    if request.method == 'POST':
-        amount        = request.POST.get('amount')
-        mobile_number = request.POST.get('mobile_number')
-        provider      = request.POST.get('provider', '')
-        account_name  = request.POST.get('account_name', '')
-        notes         = request.POST.get('note', '')
-
-        Withdrawal.objects.create(
-            amount        = amount,
-            mobile_number = mobile_number,
-            provider      = provider,
-            account_name  = account_name,
-            notes         = notes,
-            status        = 'pending',
-        )
-        return redirect('dashboard:withdrawals')
-
-    return render(request, 'dashboard/create_withdrawal.html', {
-        'momo_balance'      : momo_balance,
-        'recent_withdrawals': recent_withdrawals,
-    })
-
-@login_required
-def update_withdrawal_status(request, withdrawal_id):
-    """
-    Updates the status of a withdrawal request.
-    When marking as completed, calls IOTEC disbursement API
-    to actually send money to the recipient's mobile number.
-    """
-    withdrawal = get_object_or_404(Withdrawal, id=withdrawal_id)
-
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-
-        if new_status == 'completed':
-            # ── Call IOTEC to actually send the money ──
-            from payments import iotec
-            result = iotec.request_disbursement(
-                phone_number  = withdrawal.mobile_number,
-                amount        = withdrawal.amount,
-                withdrawal_id = withdrawal.id,
-                provider      = withdrawal.provider,
+            result = request_withdrawal(
+                tenant=public_tenant,
+                amount=amount,
+                phone_number=phone_number,
+                provider=provider,
             )
 
-            if result['status'] == 'pending':
-                # IOTEC accepted the disbursement
-                withdrawal.status       = 'completed'
-                withdrawal.completed_at = timezone.now()
-                withdrawal.verified     = True
-                withdrawal.save()
-            else:
-                # IOTEC rejected — keep as pending, don't mark complete
-                # The admin will see it's still pending and can retry
-                messages.error(
-                    request,
-                    f"Disbursement failed: {result.get('message', 'Unknown error')}"
-                )
+            if result['success']:
+                messages.success(request, 'Withdrawal request submitted successfully.')
                 return redirect('dashboard:withdrawals')
+            else:
+                messages.error(request, result['message'])
+                return redirect('dashboard:create_withdrawal')
 
-        elif new_status in ['failed', 'cancelled']:
-            withdrawal.status = new_status
-            withdrawal.save()
-
-    return redirect('dashboard:withdrawals')
-
-
-@login_required
-def delete_withdrawal(request, withdrawal_id):
-    """
-    Deletes a withdrawal request permanently.
-    Only pending withdrawals can be deleted.
-    """
-    withdrawal = get_object_or_404(Withdrawal, id=withdrawal_id)
-
-    if request.method == 'POST':
-        withdrawal.delete()
-
-    return redirect('dashboard:withdrawals')
+    return render(request, 'dashboard/create_withdrawal.html', {
+        'wallet_balance': wallet_balance,
+        'minimum_balance': 5000,
+    })
 
 # ── Leads ──────────────────────────────────────────────────
 
@@ -2390,3 +2284,78 @@ def wallet_view(request):
         'minimum_balance': 5000,
     }
     return render(request, 'dashboard/wallet.html', context)
+
+
+
+@login_required
+def withdrawals_view(request):
+    """
+    Shows this tenant's withdrawal history with summary cards.
+    """
+    tenant = request.tenant
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        from superadmin.models import WithdrawalRequest
+
+        public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+
+        # All withdrawal records for this tenant
+        withdrawals_qs = WithdrawalRequest.objects.filter(
+            tenant=public_tenant
+        ).order_by('-requested_at')
+
+        # Status filter
+        status_filter = request.GET.get('status', '')
+        if status_filter:
+            withdrawals_qs = withdrawals_qs.filter(status=status_filter)
+
+        # Summary numbers
+        total_withdrawn = WithdrawalRequest.objects.filter(
+            tenant=public_tenant, status=WithdrawalRequest.COMPLETED
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        pending_count = WithdrawalRequest.objects.filter(
+            tenant=public_tenant, status=WithdrawalRequest.PENDING
+        ).count()
+
+        completed_count = WithdrawalRequest.objects.filter(
+            tenant=public_tenant, status=WithdrawalRequest.COMPLETED
+        ).count()
+
+        wallet_balance = public_tenant.wallet_balance
+
+    return render(request, 'dashboard/withdrawals.html', {
+        'withdrawals'     : withdrawals_qs,
+        'wallet_balance'  : wallet_balance,
+        'total_withdrawn' : total_withdrawn,
+        'pending_count'   : pending_count,
+        'completed_count' : completed_count,
+        'status_filter'   : status_filter,
+    })
+
+
+@login_required
+def cancel_withdrawal_view(request, withdrawal_id):
+    tenant = request.tenant
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        from superadmin.models import WithdrawalRequest
+
+        public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+
+        withdrawal = WithdrawalRequest.objects.filter(
+            id=withdrawal_id,
+            tenant=public_tenant,
+            status=WithdrawalRequest.PENDING
+        ).first()
+
+        if withdrawal:
+            withdrawal.status = WithdrawalRequest.CANCELLED
+            withdrawal.save()
+            messages.success(request, 'Withdrawal request cancelled.')
+        else:
+            messages.error(request, 'Withdrawal not found or already processed.')
+
+    return redirect('dashboard:withdrawals')
