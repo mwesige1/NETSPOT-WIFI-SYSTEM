@@ -1,275 +1,175 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NETSPOT — Super Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-</head>
-<body>
+{% extends 'superadmin/base.html' %}
 
-<!-- Sidebar Overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Platform Overview{% endblock %}
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-        <div>
-            <div class="brand-name">
-                <span class="brand-dot"></span>
-                NETSPOT
-            </div>
-            <span class="brand-sub">Platform Admin</span>
-        </div>
-        <button class="sidebar-close" id="sidebarClose">
-            <i class="bi bi-x"></i>
-        </button>
+{% block content %}
+
+<!-- Greeting Banner -->
+<div class="greeting-banner">
+    <div>
+        <p class="greeting-date">Platform Dashboard</p>
+        <h2 class="greeting-title">Welcome back, {{ request.user.first_name|default:request.user.username }} 👋</h2>
+        <p class="greeting-sub">Here's what's happening across your platform today.</p>
     </div>
-
-    <nav class="sidebar-nav">
-        <a href="{% url 'superadmin:dashboard' %}" class="nav-item active">
-            <i class="bi bi-grid-1x2-fill"></i>
-            Dashboard
-        </a>
-
-        <span class="nav-label" style="margin-top:12px;">Tenants</span>
-        <a href="{% url 'superadmin:applications' %}" class="nav-item">
-            <i class="bi bi-person-check-fill"></i>
-            Applications
-            {% if pending_count %}
-            <span style="margin-left:auto;background:#6366f1;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;">{{ pending_count }}</span>
-            {% endif %}
-        </a>
-        <a href="{% url 'superadmin:tenant_list' %}" class="nav-item">
-            <i class="bi bi-buildings-fill"></i>
-            All Tenants
-        </a>
-
-        <span class="nav-label" style="margin-top:12px;">System</span>
-        <a href="{% url 'admin:index' %}" class="nav-item">
-            <i class="bi bi-gear-fill"></i>
-            Django Admin
-        </a>
-    </nav>
-
-    <div class="sidebar-footer">
-        <a href="/admin/logout/" class="logout-btn">
-            <i class="bi bi-box-arrow-left"></i>
-            Logout
-        </a>
+    <div class="greeting-stat">
+        <p>Total Tenants</p>
+        <h2>{{ total_tenants }}</h2>
     </div>
-</aside>
-
-<!-- Main Content -->
-<div class="main-content">
-
-    <!-- Topbar -->
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="hamburger" id="hamburger">
-                <i class="bi bi-list"></i>
-            </button>
-            <div class="topbar-title">Platform Overview</div>
-        </div>
-        <div class="topbar-right">
-            <div class="admin-badge">
-                <span class="admin-name">{{ request.user.username }}</span>
-                <div class="admin-avatar">
-                    {{ request.user.username|first|upper }}
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Page Content -->
-    <main class="page-content">
-
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
-                <i class="bi bi-info-circle-fill"></i>
-                {{ message }}
-            </div>
-            {% endfor %}
-        {% endif %}
-
-        <!-- Greeting Banner -->
-        <div class="greeting-banner">
-            <div>
-                <p class="greeting-date">Platform Dashboard</p>
-                <h2 class="greeting-title">Welcome back, {{ request.user.first_name|default:request.user.username }} 👋</h2>
-                <p class="greeting-sub">Here's what's happening across your platform today.</p>
-            </div>
-            <div class="greeting-stat">
-                <p>Total Tenants</p>
-                <h2>{{ total_tenants }}</h2>
-            </div>
-        </div>
-
-        <!-- Stats Row -->
-        <div class="stats-row" style="margin-bottom:24px;">
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-purple">
-                    <i class="bi bi-hourglass-split"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>Pending Approval</p>
-                    <h4>{{ pending_count }}</h4>
-                    <small>Awaiting review</small>
-                </div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-success">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>Active Tenants</p>
-                    <h4>{{ active_count }}</h4>
-                    <small>Fully operational</small>
-                </div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-warning">
-                    <i class="bi bi-clock-fill"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>On Trial</p>
-                    <h4>{{ trial_count }}</h4>
-                    <small>Trial period</small>
-                </div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-danger">
-                    <i class="bi bi-pause-circle-fill"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>Suspended</p>
-                    <h4>{{ suspended_count }}</h4>
-                    <small>Access restricted</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Revenue Stats -->
-        <div class="grid-2" style="margin-bottom:24px;">
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-success">
-                    <i class="bi bi-cash-stack"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>Total Platform Revenue</p>
-                    <h4>UGX {{ total_revenue|floatformat:0 }}</h4>
-                    <small>Across all tenants</small>
-                </div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="dash-stat-icon icon-primary">
-                    <i class="bi bi-percent"></i>
-                </div>
-                <div class="dash-stat-info">
-                    <p>Total Commission Earned</p>
-                    <h4>UGX {{ total_commission|floatformat:0 }}</h4>
-                    <small>Platform earnings</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Active Sessions + Recent Tenants -->
-        <div class="grid-8-4">
-
-            <!-- Recent Tenants -->
-            <div class="dash-table">
-                <div class="dash-table-header">
-                    <h6>Recent Tenants</h6>
-                    <a href="{% url 'superadmin:tenant_list' %}" class="btn btn-outline btn-sm">
-                        View All
-                    </a>
-                </div>
-                <div class="table-wrap">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Business</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Joined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for tenant in recent_tenants %}
-                            <tr>
-                                <td>
-                                    <div class="customer-cell">
-                                        <div class="customer-avatar">
-                                            {{ tenant.business_name|first|upper }}
-                                        </div>
-                                        <div>
-                                            <p class="customer-name">{{ tenant.business_name }}</p>
-                                            <p class="customer-sub">{{ tenant.email }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>{{ tenant.get_business_type_display }}</td>
-                                <td>
-                                    <span class="badge badge-{% if tenant.status == 'active' %}success{% elif tenant.status == 'trial' %}warning{% elif tenant.status == 'suspended' %}failed{% else %}muted{% endif %}">
-                                        {{ tenant.get_status_display }}
-                                    </span>
-                                </td>
-                                <td class="text-muted">{{ tenant.created_at|date:"d M Y" }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    <i class="bi bi-buildings"></i>
-                                    <p>No tenants yet</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Quick Stats Panel -->
-            <div>
-                <!-- Active Sessions Card -->
-                <div class="card" style="margin-bottom:16px;">
-                    <div class="dash-stat-icon icon-success" style="margin-bottom:12px;">
-                        <i class="bi bi-wifi"></i>
-                    </div>
-                    <p class="stat-label">Active Sessions</p>
-                    <h3 class="stat-value">{{ total_sessions }}</h3>
-                    <p class="stat-sub">Live connections now</p>
-                </div>
-
-                <!-- Pending Applications Card -->
-                {% if pending_count %}
-                <div class="card" style="border-left:4px solid #6366f1;">
-                    <p class="stat-label" style="color:#6366f1;">Action Required</p>
-                    <h4 class="stat-value" style="font-size:20px;">{{ pending_count }} Application{{ pending_count|pluralize }}</h4>
-                    <p class="stat-sub" style="margin-bottom:12px;">Waiting for your review</p>
-                    <a href="{% url 'superadmin:applications' %}" class="btn btn-primary btn-sm w-full">
-                        Review Now
-                    </a>
-                </div>
-                {% else %}
-                <div class="card">
-                    <div style="text-align:center;padding:16px 0;">
-                        <i class="bi bi-check-circle-fill" style="font-size:32px;color:#22c55e;"></i>
-                        <p style="font-size:13px;color:#6b7280;margin-top:8px;">All applications reviewed</p>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-        </div>
-
-    </main>
 </div>
 
-<script src="{% static 'js/dashboard.js' %}"></script>
-</body>
-</html>
+<!-- Stats Row -->
+<div class="stats-row" style="margin-bottom:24px;">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-purple">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Pending Approval</p>
+            <h4>{{ pending_count }}</h4>
+            <small>Awaiting review</small>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-success">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Active Tenants</p>
+            <h4>{{ active_count }}</h4>
+            <small>Fully operational</small>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-warning">
+            <i class="bi bi-clock-fill"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>On Trial</p>
+            <h4>{{ trial_count }}</h4>
+            <small>Trial period</small>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-danger">
+            <i class="bi bi-pause-circle-fill"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Suspended</p>
+            <h4>{{ suspended_count }}</h4>
+            <small>Access restricted</small>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue Stats -->
+<div class="grid-2" style="margin-bottom:24px;">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-success">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Total Platform Revenue</p>
+            <h4>UGX {{ total_revenue|floatformat:0 }}</h4>
+            <small>Across all tenants</small>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-primary">
+            <i class="bi bi-percent"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Total Commission Earned</p>
+            <h4>UGX {{ total_commission|floatformat:0 }}</h4>
+            <small>Platform earnings</small>
+        </div>
+    </div>
+</div>
+
+<!-- Active Sessions + Recent Tenants -->
+<div class="grid-8-4">
+
+    <div class="dash-table">
+        <div class="dash-table-header">
+            <h6>Recent Tenants</h6>
+            <a href="{% url 'superadmin:tenant_list' %}" class="btn btn-outline btn-sm">
+                View All
+            </a>
+        </div>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Business</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tenant in recent_tenants %}
+                    <tr>
+                        <td>
+                            <div class="customer-cell">
+                                <div class="customer-avatar">
+                                    {{ tenant.business_name|first|upper }}
+                                </div>
+                                <div>
+                                    <p class="customer-name">{{ tenant.business_name }}</p>
+                                    <p class="customer-sub">{{ tenant.email }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ tenant.get_business_type_display }}</td>
+                        <td>
+                            <span class="badge badge-{% if tenant.status == 'active' %}success{% elif tenant.status == 'trial' %}warning{% elif tenant.status == 'suspended' %}failed{% else %}muted{% endif %}">
+                                {{ tenant.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-muted">{{ tenant.created_at|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <i class="bi bi-buildings"></i>
+                            <p>No tenants yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="dash-stat-icon icon-success" style="margin-bottom:12px;">
+                <i class="bi bi-wifi"></i>
+            </div>
+            <p class="stat-label">Active Sessions</p>
+            <h3 class="stat-value">{{ total_sessions }}</h3>
+            <p class="stat-sub">Live connections now</p>
+        </div>
+
+        {% if pending_count %}
+        <div class="card" style="border-left:4px solid #6366f1;">
+            <p class="stat-label" style="color:#6366f1;">Action Required</p>
+            <h4 class="stat-value" style="font-size:20px;">{{ pending_count }} Application{{ pending_count|pluralize }}</h4>
+            <p class="stat-sub" style="margin-bottom:12px;">Waiting for your review</p>
+            <a href="{% url 'superadmin:applications' %}" class="btn btn-primary btn-sm w-full">
+                Review Now
+            </a>
+        </div>
+        {% else %}
+        <div class="card">
+            <div style="text-align:center;padding:16px 0;">
+                <i class="bi bi-check-circle-fill" style="font-size:32px;color:#22c55e;"></i>
+                <p style="font-size:13px;color:#6b7280;margin-top:8px;">All applications reviewed</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

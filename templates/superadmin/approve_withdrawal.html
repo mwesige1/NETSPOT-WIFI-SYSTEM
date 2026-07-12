@@ -1,0 +1,48 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Approve Withdrawal{% endblock %}
+{% block page_title %}Approve Withdrawal{% endblock %}
+
+{% block content %}
+
+<div class="form-card">
+    <h6 class="mb-2">Confirm Withdrawal Approval</h6>
+
+    <div class="mini-stats mb-3">
+        <div class="mini-stat">
+            <p class="mini-label">Tenant</p>
+            <p class="mini-value">{{ withdrawal.tenant.business_name }}</p>
+        </div>
+        <div class="mini-stat">
+            <p class="mini-label">Amount</p>
+            <p class="mini-value">UGX {{ withdrawal.amount|floatformat:0 }}</p>
+        </div>
+        <div class="mini-stat">
+            <p class="mini-label">Phone</p>
+            <p class="mini-value">{{ withdrawal.phone_number }}</p>
+        </div>
+        <div class="mini-stat">
+            <p class="mini-label">Provider</p>
+            <p class="mini-value">{{ withdrawal.provider|upper }}</p>
+        </div>
+    </div>
+
+    <div class="notice-warning">
+        <i class="bi bi-info-circle"></i>
+        <div>
+            <p class="notice-title">This will send real money</p>
+            <p class="notice-text">
+                Approving will immediately attempt disbursement of UGX {{ withdrawal.amount|floatformat:0 }}
+                to {{ withdrawal.phone_number }} via {{ withdrawal.provider|upper }}. This cannot be undone.
+            </p>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary w-full">Confirm Approval &amp; Disburse</button>
+        <a href="{% url 'superadmin:withdrawal_queue' %}" class="cancel-link">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}

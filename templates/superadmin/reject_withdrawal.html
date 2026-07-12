@@ -1,0 +1,33 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Reject Withdrawal{% endblock %}
+{% block page_title %}Reject Withdrawal{% endblock %}
+
+{% block content %}
+
+<div class="form-card">
+    <h6 class="mb-2">Reject Withdrawal Request</h6>
+
+    <div class="mini-stats mb-3">
+        <div class="mini-stat">
+            <p class="mini-label">Tenant</p>
+            <p class="mini-value">{{ withdrawal.tenant.business_name }}</p>
+        </div>
+        <div class="mini-stat">
+            <p class="mini-label">Amount</p>
+            <p class="mini-value">UGX {{ withdrawal.amount|floatformat:0 }}</p>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label class="form-label">Reason for rejection</label>
+            <textarea name="reason" class="form-textarea" placeholder="Explain why this withdrawal is being rejected..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-danger w-full">Confirm Rejection</button>
+        <a href="{% url 'superadmin:withdrawal_queue' %}" class="cancel-link">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}

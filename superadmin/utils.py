@@ -86,8 +86,66 @@ def request_withdrawal(tenant, amount, phone_number, provider):
         withdrawal.approved_at = timezone.now()
         withdrawal.save()
         print(f"✅ Auto-approved withdrawal of UGX {amount} for {tenant.business_name} (under threshold)")
-        # Actual IOTEC disbursement call happens in the next step we build
+
+        # Immediately attempt disbursement for auto-approved withdrawals
+        complete_withdrawal(withdrawal)
+
     else:
         print(f"⏳ Withdrawal of UGX {amount} for {tenant.business_name} held for manual approval (threshold: UGX {settings.AUTO_APPROVAL_WITHDRAWAL_THRESHOLD})")
 
     return {'success': True, 'withdrawal': withdrawal}
+
+
+
+def complete_withdrawal(withdrawal):
+    """
+    Attempts to actually disburse a withdrawal via IOTEC.
+    Only on confirmed success does it:
+      - mark the withdrawal COMPLETED
+      - debit the tenant's wallet_balance
+      - write a WalletTransaction debit entry
+
+    If disbursement fails, the withdrawal is marked FAILED
+    and the wallet is never touched — no money was actually lost.
+    """
+    from payments import iotec
+
+    tenant = withdrawal.tenant
+
+    result = iotec.request_disbursement(
+        phone_number=withdrawal.phone_number,
+        amount=withdrawal.amount,
+        withdrawal_id=withdrawal.id,
+        provider=withdrawal.provider,
+    )
+
+    if result['status'] == 'pending':
+        # IOTEC accepted the disbursement request
+        tenant.wallet_balance -= withdrawal.amount
+        tenant.save()
+
+        WalletTransaction.objects.create(
+            tenant=tenant,
+            transaction_type=WalletTransaction.DEBIT,
+            reason=WalletTransaction.REASON_WITHDRAWAL,
+            amount=withdrawal.amount,
+            balance_after=tenant.wallet_balance,
+            order_id=None,
+            note=f"Withdrawal to {withdrawal.phone_number} ({withdrawal.provider})"
+        )
+
+        withdrawal.status = WithdrawalRequest.COMPLETED
+        withdrawal.completed_at = timezone.now()
+        withdrawal.iotec_txn_id = result.get('reference_id', '')
+        withdrawal.save()
+
+        print(f"✅ Withdrawal completed for {tenant.business_name}: UGX {withdrawal.amount}")
+        return {'success': True}
+
+    else:
+        withdrawal.status = WithdrawalRequest.FAILED
+        withdrawal.failure_reason = result.get('message', 'Disbursement failed.')
+        withdrawal.save()
+
+        print(f"❌ Withdrawal failed for {tenant.business_name}: {result.get('message')}")
+        return {'success': False, 'message': result.get('message', 'Disbursement failed.')}

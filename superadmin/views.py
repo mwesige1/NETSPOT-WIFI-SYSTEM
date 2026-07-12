@@ -235,3 +235,98 @@ def tenant_list(request):
     return render(request, 'superadmin/tenant_list.html', {
         'tenants': tenants,
     })
+
+
+
+from superadmin.models import WithdrawalRequest
+from superadmin.utils import complete_withdrawal
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def withdrawal_queue(request):
+    """
+    Lists all withdrawal requests awaiting manual approval
+    (amounts at or above the auto-approval threshold).
+    """
+    status_filter = request.GET.get('status', 'pending')
+
+    withdrawals = WithdrawalRequest.objects.exclude(
+        tenant__schema_name='public'
+    ).order_by('-requested_at')
+
+    if status_filter:
+        withdrawals = withdrawals.filter(status=status_filter)
+
+    pending_count = WithdrawalRequest.objects.filter(status='pending').count()
+
+    return render(request, 'superadmin/withdrawal_queue.html', {
+        'withdrawals'  : withdrawals,
+        'status_filter': status_filter,
+        'pending_count': pending_count,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def approve_withdrawal(request, withdrawal_id):
+    """
+    Approves a pending withdrawal request and immediately
+    attempts disbursement via IOTEC.
+    """
+    withdrawal = get_object_or_404(
+        WithdrawalRequest, id=withdrawal_id, status='pending'
+    )
+
+    if request.method == 'POST':
+        withdrawal.status = WithdrawalRequest.APPROVED
+        withdrawal.approved_at = timezone.now()
+        withdrawal.save()
+
+        result = complete_withdrawal(withdrawal)
+
+        if result['success']:
+            messages.success(
+                request,
+                f'Withdrawal of UGX {withdrawal.amount} for {withdrawal.tenant.business_name} approved and disbursed.'
+            )
+        else:
+            messages.error(
+                request,
+                f'Withdrawal approved but disbursement failed: {result["message"]}'
+            )
+
+        return redirect('superadmin:withdrawal_queue')
+
+    return render(request, 'superadmin/approve_withdrawal.html', {
+        'withdrawal': withdrawal,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def reject_withdrawal(request, withdrawal_id):
+    """
+    Rejects a pending withdrawal request with a reason.
+    Wallet is never touched since nothing was disbursed.
+    """
+    withdrawal = get_object_or_404(
+        WithdrawalRequest, id=withdrawal_id, status='pending'
+    )
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+
+        withdrawal.status = WithdrawalRequest.FAILED
+        withdrawal.failure_reason = reason or 'Rejected by admin'
+        withdrawal.save()
+
+        messages.warning(
+            request,
+            f'Withdrawal of UGX {withdrawal.amount} for {withdrawal.tenant.business_name} rejected.'
+        )
+        return redirect('superadmin:withdrawal_queue')
+
+    return render(request, 'superadmin/reject_withdrawal.html', {
+        'withdrawal': withdrawal,
+    })

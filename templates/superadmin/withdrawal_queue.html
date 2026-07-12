@@ -1,0 +1,98 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Withdrawal Queue{% endblock %}
+{% block page_title %}Withdrawal Queue{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>Withdrawal Requests</h5>
+        <p>Manually approve or reject withdrawals above the auto-approval threshold</p>
+    </div>
+</div>
+
+<div class="card-grid mb-2">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-warning">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Pending Approval</p>
+            <h4>{{ pending_count }}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="tab-pills">
+    <a href="?status=pending" class="tab-pill {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+    <a href="?status=approved" class="tab-pill {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
+    <a href="?status=completed" class="tab-pill {% if status_filter == 'completed' %}active{% endif %}">Completed</a>
+    <a href="?status=failed" class="tab-pill {% if status_filter == 'failed' %}active{% endif %}">Failed/Rejected</a>
+    <a href="?status=" class="tab-pill {% if not status_filter %}active{% endif %}">All</a>
+</div>
+
+<div class="dash-table">
+    <div class="dash-table-header">
+        <h6>Withdrawal Requests</h6>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Amount</th>
+                    <th>Phone Number</th>
+                    <th>Provider</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for withdrawal in withdrawals %}
+                <tr>
+                    <td class="font-semibold">{{ withdrawal.tenant.business_name }}</td>
+                    <td class="font-bold">UGX {{ withdrawal.amount|floatformat:0 }}</td>
+                    <td>{{ withdrawal.phone_number }}</td>
+                    <td>{{ withdrawal.provider|upper }}</td>
+                    <td>
+                        {% if withdrawal.status == 'completed' %}
+                            <span class="badge badge-success">Completed</span>
+                        {% elif withdrawal.status == 'approved' %}
+                            <span class="badge badge-info">Approved</span>
+                        {% elif withdrawal.status == 'pending' %}
+                            <span class="badge badge-pending">Pending</span>
+                        {% elif withdrawal.status == 'cancelled' %}
+                            <span class="badge badge-muted">Cancelled</span>
+                        {% else %}
+                            <span class="badge badge-failed">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size:12px;">
+                        {{ withdrawal.requested_at|date:"d M Y, H:i" }}
+                    </td>
+                    <td>
+                        {% if withdrawal.status == 'pending' %}
+                        <div class="action-group">
+                            <a href="{% url 'superadmin:approve_withdrawal' withdrawal.id %}" class="btn-complete">Approve</a>
+                            <a href="{% url 'superadmin:reject_withdrawal' withdrawal.id %}" class="btn-failed">Reject</a>
+                        </div>
+                        {% else %}
+                            <span class="text-muted" style="font-size:12px;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <p class="text-muted">No withdrawal requests found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
