@@ -83,7 +83,7 @@ def applications(request):
     Lists all tenant applications awaiting approval.
     """
     applications = Tenant.objects.filter(
-        status='awaiting_approval'
+        status='pending'
     ).order_by('-created_at')
 
     return render(request, 'superadmin/applications.html', {
@@ -101,7 +101,7 @@ def approve_tenant(request, tenant_id):
     - Creates their subdomain
     - Emails credentials to tenant
     """
-    tenant = get_object_or_404(Tenant, id=tenant_id, status='awaiting_approval')
+    tenant = get_object_or_404(Tenant, id=tenant_id, status='pending')
 
     if request.method == 'POST':
         trial_days       = int(request.POST.get('trial_days', 30))
@@ -184,7 +184,7 @@ def reject_tenant(request, tenant_id):
     """
     Rejects a tenant application with a reason.
     """
-    tenant = get_object_or_404(Tenant, id=tenant_id, status='awaiting_approval')
+    tenant = get_object_or_404(Tenant, id=tenant_id, status='pending')
 
     if request.method == 'POST':
         reason = request.POST.get('reason', '').strip()
@@ -330,3 +330,79 @@ def reject_withdrawal(request, withdrawal_id):
     return render(request, 'superadmin/reject_withdrawal.html', {
         'withdrawal': withdrawal,
     })
+
+
+
+
+from superadmin.models import SMSBundle
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def sms_bundles(request):
+    """
+    Lists all SMS bundles for management.
+    """
+    bundles = SMSBundle.objects.all().order_by('display_order', 'sms_count')
+
+    return render(request, 'superadmin/sms_bundles.html', {
+        'bundles': bundles,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def create_sms_bundle(request):
+    """
+    Creates a new SMS bundle.
+    """
+    if request.method == 'POST':
+        SMSBundle.objects.create(
+            name          = request.POST.get('name'),
+            sms_count     = request.POST.get('sms_count'),
+            price         = request.POST.get('price'),
+            display_order = request.POST.get('display_order', 0),
+            is_active     = request.POST.get('is_active') == 'on',
+        )
+        messages.success(request, 'SMS bundle created successfully.')
+        return redirect('superadmin:sms_bundles')
+
+    return render(request, 'superadmin/create_sms_bundle.html')
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def edit_sms_bundle(request, bundle_id):
+    """
+    Edits an existing SMS bundle.
+    """
+    bundle = get_object_or_404(SMSBundle, id=bundle_id)
+
+    if request.method == 'POST':
+        bundle.name          = request.POST.get('name', bundle.name)
+        bundle.sms_count     = request.POST.get('sms_count', bundle.sms_count)
+        bundle.price         = request.POST.get('price', bundle.price)
+        bundle.display_order = request.POST.get('display_order', bundle.display_order)
+        bundle.is_active     = request.POST.get('is_active') == 'on'
+        bundle.save()
+        messages.success(request, 'SMS bundle updated successfully.')
+        return redirect('superadmin:sms_bundles')
+
+    return render(request, 'superadmin/edit_sms_bundle.html', {
+        'bundle': bundle,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def toggle_sms_bundle(request, bundle_id):
+    """
+    Toggles a bundle's active status.
+    """
+    bundle = get_object_or_404(SMSBundle, id=bundle_id)
+
+    if request.method == 'POST':
+        bundle.is_active = not bundle.is_active
+        bundle.save()
+
+    return redirect('superadmin:sms_bundles')

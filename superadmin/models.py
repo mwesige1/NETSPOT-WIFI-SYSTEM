@@ -124,3 +124,18 @@ class WithdrawalRequest(models.Model):
 
     def __str__(self):
         return f"{self.tenant.schema_name} — UGX {self.amount} ({self.status})"
+    
+
+
+class SMSBundle(models.Model):
+    name = models.CharField(max_length=100)
+    sms_count = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'sms_count']
+
+    def __str__(self):
+        return f"{self.name} — {self.sms_count} SMS for UGX {self.price}"

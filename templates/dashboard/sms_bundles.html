@@ -1,0 +1,67 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}SMS Credits{% endblock %}
+{% block page_title %}SMS Credits{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; font-size:18px; cursor:pointer; color:inherit; line-height:1; padding:0 0 0 12px;">&times;</button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="page-header">
+    <div>
+        <h5>SMS Credits</h5>
+        <p>Buy SMS credits for sending customer notifications</p>
+    </div>
+</div>
+
+<div class="card-grid mb-2">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-primary">
+            <i class="bi bi-chat-dots-fill"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>SMS Credits Remaining</p>
+            <h4>{{ sms_credits }}</h4>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-success">
+            <i class="bi bi-wallet2"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Wallet Balance</p>
+            <h4>UGX {{ wallet_balance|floatformat:0 }}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="role-grid">
+    {% for bundle in bundles %}
+    <div class="role-card">
+        <div class="role-header-between">
+            <div>
+                <p class="role-name">{{ bundle.name }}</p>
+                <p class="role-sub">{{ bundle.sms_count }} SMS</p>
+            </div>
+        </div>
+        <p class="role-desc mb-2">UGX {{ bundle.price|floatformat:0 }} total — UGX {{ bundle.price|floatformat:1 }} per SMS</p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="bundle_id" value="{{ bundle.id }}">
+            <button type="submit" class="btn btn-primary w-full">Buy Bundle</button>
+        </form>
+    </div>
+    {% empty %}
+    <p class="text-muted">No SMS bundles available right now.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

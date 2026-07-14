@@ -149,3 +149,49 @@ def complete_withdrawal(withdrawal):
 
         print(f"❌ Withdrawal failed for {tenant.business_name}: {result.get('message')}")
         return {'success': False, 'message': result.get('message', 'Disbursement failed.')}
+    
+
+
+
+
+
+from superadmin.models import SMSBundle
+
+
+def purchase_sms_bundle(tenant, bundle_id):
+    """
+    Purchases an SMS bundle for a tenant, deducting from their
+    wallet balance and crediting sms_credits.
+    """
+    try:
+        bundle = SMSBundle.objects.get(id=bundle_id, is_active=True)
+    except SMSBundle.DoesNotExist:
+        return {'success': False, 'message': 'SMS bundle not found or no longer available.'}
+
+    if tenant.wallet_balance < bundle.price:
+        return {
+            'success': False,
+            'message': f'Insufficient wallet balance. This bundle costs UGX {bundle.price}, your balance is UGX {tenant.wallet_balance}.'
+        }
+
+    # Debit wallet
+    tenant.wallet_balance -= bundle.price
+    tenant.sms_credits += bundle.sms_count
+    tenant.save()
+
+    # Ledger entry
+    WalletTransaction.objects.create(
+        tenant=tenant,
+        transaction_type=WalletTransaction.DEBIT,
+        reason=WalletTransaction.REASON_SMS_PURCHASE,
+        amount=bundle.price,
+        balance_after=tenant.wallet_balance,
+        order_id=None,
+        note=f"Purchased {bundle.name} bundle — {bundle.sms_count} SMS credits"
+    )
+
+    return {
+        'success': True,
+        'sms_credits': tenant.sms_credits,
+        'bundle': bundle,
+    }

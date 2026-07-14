@@ -138,6 +138,12 @@
                     Wallet
                 </a>
 
+            <a href="{% url 'dashboard:sms_bundles' %}"
+                class="nav-item {% if request.resolver_match.url_name == 'sms_bundles' %}active{% endif %}">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    SMS Credits
+                </a>
+
             <a href="{% url 'dashboard:withdrawals' %}"
                class="nav-item {% if request.resolver_match.url_name == 'withdrawals' or request.resolver_match.url_name == 'create_withdrawal' %}active{% endif %}">
                 <i class="bi bi-arrow-up-circle-fill"></i>

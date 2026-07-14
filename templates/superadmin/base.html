@@ -40,6 +40,12 @@
             <i class="bi bi-person-check-fill"></i>
             Applications
         </a>
+
+        <a href="{% url 'superadmin:sms_bundles' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'sms_bundles' or request.resolver_match.url_name == 'create_sms_bundle' or request.resolver_match.url_name == 'edit_sms_bundle' %}active{% endif %}">
+            <i class="bi bi-chat-dots-fill"></i>
+            SMS Bundles
+        </a>
         <a href="{% url 'superadmin:tenant_list' %}"
            class="nav-item {% if request.resolver_match.url_name == 'tenant_list' %}active{% endif %}">
             <i class="bi bi-buildings-fill"></i>

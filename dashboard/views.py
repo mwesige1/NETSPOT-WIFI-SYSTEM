@@ -1436,7 +1436,7 @@ def toggle_advertisement(request, ad_id):
 
 
 @login_required
-def messages(request):
+def messages_list(request):
     channel_filter = request.GET.get('channel', '')
 
     messages_qs = Message.objects.select_related(
@@ -2359,3 +2359,43 @@ def cancel_withdrawal_view(request, withdrawal_id):
             messages.error(request, 'Withdrawal not found or already processed.')
 
     return redirect('dashboard:withdrawals')
+
+
+
+@login_required
+def sms_bundles_view(request):
+    """
+    Shows available SMS bundles for purchase and current credit balance.
+    """
+    tenant = request.tenant
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        from superadmin.models import SMSBundle
+        from superadmin.utils import purchase_sms_bundle
+
+        public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+        bundles = SMSBundle.objects.filter(is_active=True)
+
+        if request.method == 'POST':
+            bundle_id = request.POST.get('bundle_id')
+            result = purchase_sms_bundle(public_tenant, bundle_id)
+
+            if result['success']:
+                messages.success(
+                    request,
+                    f"Purchased {result['bundle'].sms_count} SMS credits successfully."
+                )
+            else:
+                messages.error(request, result['message'])
+
+            return redirect('dashboard:sms_bundles')
+
+        wallet_balance = public_tenant.wallet_balance
+        sms_credits = public_tenant.sms_credits
+
+    return render(request, 'dashboard/sms_bundles.html', {
+        'bundles': bundles,
+        'wallet_balance': wallet_balance,
+        'sms_credits': sms_credits,
+    })

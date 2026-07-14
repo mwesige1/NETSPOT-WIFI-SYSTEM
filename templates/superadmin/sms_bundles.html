@@ -1,0 +1,70 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}SMS Bundles{% endblock %}
+{% block page_title %}SMS Bundles{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>SMS Bundles</h5>
+        <p>Manage SMS credit packages available to tenants</p>
+    </div>
+    <a href="{% url 'superadmin:create_sms_bundle' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> New Bundle
+    </a>
+</div>
+
+<div class="dash-table">
+    <div class="dash-table-header">
+        <h6>All Bundles</h6>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>SMS Count</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bundle in bundles %}
+                <tr>
+                    <td class="font-semibold">{{ bundle.name }}</td>
+                    <td>{{ bundle.sms_count }}</td>
+                    <td class="font-bold">UGX {{ bundle.price|floatformat:0 }}</td>
+                    <td>
+                        {% if bundle.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-muted">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-group">
+                            <a href="{% url 'superadmin:edit_sms_bundle' bundle.id %}" class="btn-edit">Edit</a>
+                            <form method="POST" action="{% url 'superadmin:toggle_sms_bundle' bundle.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-toggle">
+                                    {% if bundle.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <p class="text-muted">No SMS bundles yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -307,11 +307,7 @@ urlpatterns = [
 
     # ── Messages ───────────────────────────────────────
     # All sent messages
-    path(
-        'messages/',
-        views.messages,
-        name='messages'
-    ),
+    path('messages/', views.messages_list, name='messages'),
     # Send new message
     path(
         'messages/send/',
@@ -375,4 +371,5 @@ urlpatterns = [
     path('withdrawals/', views.withdrawals_view, name='withdrawals'),
     path('withdrawals/create/', views.create_withdrawal_view, name='create_withdrawal'),
     path('withdrawals/<int:withdrawal_id>/cancel/', views.cancel_withdrawal_view, name='cancel_withdrawal'),
+    path('sms-bundles/', views.sms_bundles_view, name='sms_bundles'),
 ]

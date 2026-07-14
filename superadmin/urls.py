@@ -12,4 +12,11 @@ urlpatterns = [
     path('withdrawals/',                          views.withdrawal_queue,   name='withdrawal_queue'),
     path('withdrawals/<int:withdrawal_id>/approve/', views.approve_withdrawal, name='approve_withdrawal'),
     path('withdrawals/<int:withdrawal_id>/reject/',  views.reject_withdrawal,  name='reject_withdrawal'),
+
+
+
+    path('sms-bundles/',                       views.sms_bundles,        name='sms_bundles'),
+    path('sms-bundles/create/',                views.create_sms_bundle,  name='create_sms_bundle'),
+    path('sms-bundles/<int:bundle_id>/edit/',  views.edit_sms_bundle,    name='edit_sms_bundle'),
+    path('sms-bundles/<int:bundle_id>/toggle/', views.toggle_sms_bundle, name='toggle_sms_bundle'),
 ]
