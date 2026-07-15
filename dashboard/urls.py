@@ -335,6 +335,7 @@ urlpatterns = [
         views.create_router,
         name='create_router'
     ),
+    path('routers/<int:router_id>/setup-script/', views.router_setup_script, name='router_setup_script'),
 
     # ── Financial Analytics ────────────────────────────
     # Full financial overview
@@ -372,4 +373,6 @@ urlpatterns = [
     path('withdrawals/create/', views.create_withdrawal_view, name='create_withdrawal'),
     path('withdrawals/<int:withdrawal_id>/cancel/', views.cancel_withdrawal_view, name='cancel_withdrawal'),
     path('sms-bundles/', views.sms_bundles_view, name='sms_bundles'),
+
+    path('force-password-change/', views.force_password_change_view, name='force_password_change'),
 ]

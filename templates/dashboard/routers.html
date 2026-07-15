@@ -155,12 +155,15 @@
             {{ router.last_seen|date:"d M Y, H:i"|default:"Never" }}
         </td>
 
-
 <td class="col-action">
     <div class="action-group">
         <a href="{% url 'network:router_detail' router.id %}"
            class="btn-view">
             <i class="bi bi-bar-chart-line"></i> Details
+        </a>
+        <a href="{% url 'dashboard:router_setup_script' router.id %}"
+           class="btn-icon btn-icon-success mobile-hide" title="Download setup script">
+            <i class="bi bi-download"></i>
         </a>
         <a href="{% url 'dashboard:edit_router' router.id %}"
            class="btn-icon btn-icon-warning mobile-hide">
@@ -196,8 +199,6 @@
     </div>
 </td>
 
-
-
     </tr>
     {% empty %}
     <tr>
@@ -221,6 +222,46 @@
 </tbody>
     </div>
 </div>
+
+{% if new_router %}
+<div class="modal-overlay active" id="setupModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Router Added — {{ new_router.location }}</h3>
+            <button class="modal-close" onclick="document.getElementById('setupModal').classList.remove('active')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+
+        <div class="mini-stats mb-3">
+            <div class="mini-stat">
+                <p class="mini-label">Identity</p>
+                <p class="mini-value" style="font-size:13px;">{{ new_router.identity }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">WiFi SSID</p>
+                <p class="mini-value" style="font-size:13px;">{{ new_router.wifi_ssid }}</p>
+            </div>
+        </div>
+
+        <div class="notice-warning mb-2">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                <p class="notice-title">Next steps</p>
+                <p class="notice-text">
+                    Download the script, paste it into your MikroTik's System → Scripts
+                    as a new script, then run it to configure your router automatically.
+                </p>
+            </div>
+        </div>
+
+        <a href="{% url 'dashboard:router_setup_script' new_router.id %}" class="btn btn-primary w-full">
+            <i class="bi bi-download"></i> Download Setup Script
+        </a>
+        <a href="{% url 'dashboard:routers' %}" class="cancel-link">Done</a>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}
 

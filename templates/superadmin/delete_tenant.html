@@ -1,0 +1,30 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Delete Tenant{% endblock %}
+{% block page_title %}Delete Tenant{% endblock %}
+
+{% block content %}
+
+<div class="form-card">
+    <h6 class="mb-2">Delete {{ tenant.business_name }}?</h6>
+
+    <div class="notice-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div>
+            <p class="notice-title">This action is permanent</p>
+            <p class="notice-text">
+                Deleting this tenant will permanently remove their entire database schema —
+                including all customers, orders, sessions, wallet history, and equipment records.
+                This cannot be undone.
+            </p>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger w-full">Yes, Permanently Delete {{ tenant.business_name }}</button>
+        <a href="{% url 'superadmin:tenant_detail' tenant.id %}" class="cancel-link">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}

@@ -25,14 +25,26 @@ class Tenant(TenantMixin):
     phone          = models.CharField(max_length=20)
     location       = models.CharField(max_length=200)
     country        = models.CharField(max_length=100, default='Uganda')
+    router_registration_token = models.CharField(max_length=64, blank=True)
+
+    # ── Responsible Person ─────────────────────────
+    contact_person_name = models.CharField(max_length=200, blank=True)
+    contact_person_phone = models.CharField(max_length=20, blank=True)
+    contact_person_role = models.CharField(max_length=50, blank=True, choices=[
+        ('owner',   'Owner'),
+        ('manager', 'Manager'),
+        ('staff',   'Staff'),
+        ('other',   'Other'),
+        ])
 
     # ── Status & Lifecycle ─────────────────────────
-    status         = models.CharField(max_length=20, choices=[
-        ('pending',    'Pending Approval'),
-        ('trial',      'Trial'),
-        ('active',     'Active'),
-        ('suspended',  'Suspended'),
-        ('terminated', 'Terminated'),
+    status = models.CharField(max_length=20, choices=[
+    ('pending',    'Pending Approval'),
+    ('rejected',   'Rejected'),
+    ('trial',      'Trial'),
+    ('active',     'Active'),
+    ('suspended',  'Suspended'),
+    ('terminated', 'Terminated'),
     ], default='pending')
 
     # ── Trial Configuration ────────────────────────

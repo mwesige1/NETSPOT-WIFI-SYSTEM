@@ -1,0 +1,116 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}{{ tenant.business_name }}{% endblock %}
+{% block page_title %}Tenant Details{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>{{ tenant.business_name }}</h5>
+        <p>{{ tenant.get_business_type_display }} — {{ tenant.schema_name }}</p>
+    </div>
+    <a href="{% url 'superadmin:tenant_list' %}" class="btn btn-outline btn-sm">Back to All Tenants</a>
+</div>
+
+<div class="card mb-2">
+    <p class="stat-label mb-2">Status</p>
+    <span class="badge badge-{% if tenant.status == 'active' %}success{% elif tenant.status == 'trial' %}warning{% elif tenant.status == 'suspended' %}failed{% elif tenant.status == 'rejected' %}failed{% else %}muted{% endif %}">
+        {{ tenant.get_status_display }}
+    </span>
+</div>
+
+<div class="grid-2 mb-2">
+    <div class="card">
+        <p class="stat-label mb-2">Business Information</p>
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <p class="mini-label">Email</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.email }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Phone</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.phone }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Location</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.location }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Country</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.country }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <p class="stat-label mb-2">Responsible Person</p>
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <p class="mini-label">Name</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.contact_person_name|default:"—" }}</p>
+            </div>
+           
+            <div class="mini-stat">
+                <p class="mini-label">Role</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.get_contact_person_role_display|default:"—" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2 mb-2">
+    <div class="card">
+        <p class="stat-label mb-2">Financial</p>
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <p class="mini-label">Wallet Balance</p>
+                <p class="mini-value">UGX {{ tenant.wallet_balance|floatformat:0 }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Commission Rate</p>
+                <p class="mini-value">{{ tenant.commission_rate }}%</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">SMS Credits</p>
+                <p class="mini-value">{{ tenant.sms_credits }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <p class="stat-label mb-2">Trial & Approval</p>
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <p class="mini-label">Trial Ends</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.trial_end|date:"d M Y"|default:"—" }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Approved By</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.approved_by|default:"—" }}</p>
+            </div>
+            <div class="mini-stat">
+                <p class="mini-label">Joined</p>
+                <p class="mini-value" style="font-size:13px;">{{ tenant.created_at|date:"d M Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if tenant.rejection_reason %}
+<div class="notice-warning mb-2">
+    <i class="bi bi-info-circle"></i>
+    <div>
+        <p class="notice-title">Rejection History</p>
+        <p class="notice-text">{{ tenant.rejection_reason }}</p>
+    </div>
+</div>
+{% endif %}
+
+<div class="danger-zone card">
+    <h6>Danger Zone</h6>
+    <p>Permanently delete this tenant and all their business data. This cannot be undone.</p>
+    <a href="{% url 'superadmin:delete_tenant' tenant.id %}" class="btn btn-danger">Delete Tenant</a>
+</div>
+
+{% endblock %}

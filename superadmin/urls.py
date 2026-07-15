@@ -19,4 +19,8 @@ urlpatterns = [
     path('sms-bundles/create/',                views.create_sms_bundle,  name='create_sms_bundle'),
     path('sms-bundles/<int:bundle_id>/edit/',  views.edit_sms_bundle,    name='edit_sms_bundle'),
     path('sms-bundles/<int:bundle_id>/toggle/', views.toggle_sms_bundle, name='toggle_sms_bundle'),
+
+    path('tenants/<int:tenant_id>/',        views.tenant_detail, name='tenant_detail'),
+    path('tenants/<int:tenant_id>/delete/', views.delete_tenant, name='delete_tenant'),
+    path('revenue/', views.revenue_report, name='revenue_report'),
 ]

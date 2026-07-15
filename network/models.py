@@ -56,6 +56,7 @@ class MikroTikRouter(models.Model):
     api_username     = models.CharField(max_length=100, default='admin')
     # Admin password for API access
     api_password     = models.CharField(max_length=100, blank=True)
+    wifi_ssid = models.CharField(max_length=100, blank=True)
 
     # ── WireGuard VPN ──────────────────────────────────
     # The VPN tunnel IP assigned to this router

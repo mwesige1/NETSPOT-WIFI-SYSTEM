@@ -19,6 +19,7 @@ def signup(request):
     """
     Tenant signup form.
     Creates a pending tenant application and sends verification email.
+    Allows a previously rejected business to reapply using the same email.
     """
     if request.method == 'POST':
         business_name = request.POST.get('business_name', '').strip()
@@ -26,14 +27,66 @@ def signup(request):
         email         = request.POST.get('email', '').strip()
         phone         = request.POST.get('phone', '').strip()
         location      = request.POST.get('location', '').strip()
+        contact_person_name  = request.POST.get('contact_person_name', '').strip()
+        contact_person_role  = request.POST.get('contact_person_role', '')
 
-        if not all([business_name, business_type, email, phone, location]):
+        if not all([business_name, business_type, email, phone, location, contact_person_name, contact_person_role]):
             messages.error(request, 'All fields are required.')
             return render(request, 'tenants/signup.html')
 
-        if Tenant.objects.filter(email=email).exists():
-            messages.error(request, 'A business with this email already exists.')
-            return render(request, 'tenants/signup.html')
+        existing_tenant = Tenant.objects.filter(email=email).first()
+
+        if existing_tenant:
+            if existing_tenant.status == 'rejected':
+                # Allow reapplication — reset the same record instead of blocking
+                existing_tenant.business_name      = business_name
+                existing_tenant.business_type      = business_type
+                existing_tenant.phone              = phone
+                existing_tenant.location           = location
+                existing_tenant.contact_person_name  = contact_person_name
+                existing_tenant.contact_person_role  = contact_person_role
+                existing_tenant.status             = 'pending'
+                existing_tenant.rejection_reason   = ''
+                existing_tenant.email_verified     = False
+                existing_tenant.verification_token = uuid.uuid4().hex
+                existing_tenant.save()
+
+                domain = settings.PLATFORM_DOMAIN
+                port   = settings.PLATFORM_PORT
+                verify_url = f"http://{domain}:{port}/verify-email/{existing_tenant.verification_token}/"
+
+                send_mail(
+                    subject    = 'Verify your NETSPOT account',
+                    message    = f"""
+Hello {business_name},
+
+Thank you for reapplying to join NETSPOT!
+
+Please verify your email address by clicking the link below:
+
+{verify_url}
+
+This link expires in 24 hours.
+
+If you did not apply for a NETSPOT account, please ignore this email.
+
+— The NETSPOT Team
+                    """,
+                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    recipient_list = [email],
+                    fail_silently  = False,
+                )
+
+                messages.success(
+                    request,
+                    'Application resubmitted! Please check your email to verify your address.'
+                )
+                return redirect('tenants:landing')
+
+            else:
+                # Still pending, active, trial, suspended, etc — genuinely blocked
+                messages.error(request, 'A business with this email already exists.')
+                return render(request, 'tenants/signup.html')
 
         schema_name = generate_schema_name(business_name)
 
@@ -44,16 +97,18 @@ def signup(request):
         verification_token = uuid.uuid4().hex
 
         tenant = Tenant(
-            schema_name        = schema_name,
-            business_name      = business_name,
-            business_type      = business_type,
-            email              = email,
-            phone              = phone,
-            location           = location,
-            status             = 'pending',
-            email_verified     = False,
-            verification_token = verification_token,
-        )
+            schema_name           = schema_name,
+            business_name         = business_name,
+            business_type         = business_type,
+            email                 = email,
+            phone                 = phone,
+            location              = location,
+            contact_person_name   = contact_person_name,
+            contact_person_role   = contact_person_role,
+            status                = 'pending',
+            email_verified        = False,
+            verification_token    = verification_token,
+            )
         tenant.auto_create_schema = False
         tenant.save()
 
@@ -93,8 +148,8 @@ If you did not apply for a NETSPOT account, please ignore this email.
 
     return render(request, 'tenants/signup.html')
 
-
 def verify_email(request, token):
+    
     """
     Handles email verification link clicks.
     Moves tenant from pending to awaiting_approval.
@@ -107,7 +162,7 @@ def verify_email(request, token):
 
     # Mark email as verified and move to awaiting approval
     tenant.email_verified = True
-    tenant.status         = 'awaiting_approval'
+    tenant.status         = 'pending'
     tenant.save()
 
     messages.success(

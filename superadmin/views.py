@@ -108,17 +108,29 @@ def approve_tenant(request, tenant_id):
         trial_commission = request.POST.get('trial_commission') == 'on'
         commission_rate  = float(request.POST.get('commission_rate', 10.0))
 
+        # Create Django user for tenant owner — guard against duplicate email
+        from django.contrib.auth.models import User
+
+        if User.objects.filter(username=tenant.email).exists():
+            messages.error(
+                request,
+                f'A user account with email {tenant.email} already exists. '
+                'This application cannot be approved with a duplicate email.'
+            )
+            return redirect('superadmin:applications')
+
         # Generate temporary password
         temp_password = secrets.token_urlsafe(10)
 
-        # Create Django user for tenant owner
-        from django.contrib.auth.models import User
         user = User.objects.create_user(
             username = tenant.email,
             email    = tenant.email,
             password = temp_password,
             is_staff = True,
         )
+        # Force password change on first login
+        from superadmin.models import UserProfile
+        UserProfile.objects.create(user=user, must_change_password=True)
 
         # Update tenant record
         tenant.status          = 'trial'
@@ -128,6 +140,11 @@ def approve_tenant(request, tenant_id):
         tenant.commission_rate = commission_rate
         tenant.approved_at     = timezone.now()
         tenant.approved_by     = request.user
+
+        # Generate a unique token used to authenticate MikroTik router
+        # registration requests for this tenant
+        tenant.router_registration_token = secrets.token_urlsafe(32)
+
         tenant.auto_create_schema = True
         tenant.save()  # This creates the PostgreSQL schema
 
@@ -143,7 +160,7 @@ def approve_tenant(request, tenant_id):
         )
 
         # Send credentials email to tenant
-        login_url = f"http://{domain_str}:{settings.PLATFORM_PORT}/login/"
+        login_url = f"http://{domain_str}:{settings.PLATFORM_PORT}/dashboard/login/"
         send_mail(
             subject  = 'Welcome to NETSPOT — Your account is ready!',
             message  = f"""
@@ -189,7 +206,7 @@ def reject_tenant(request, tenant_id):
     if request.method == 'POST':
         reason = request.POST.get('reason', '').strip()
 
-        tenant.status           = 'pending'
+        tenant.status           = 'rejected'
         tenant.rejection_reason = reason
         tenant.save()
 
@@ -406,3 +423,134 @@ def toggle_sms_bundle(request, bundle_id):
         bundle.save()
 
     return redirect('superadmin:sms_bundles')
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def tenant_detail(request, tenant_id):
+    """
+    Shows full details for a single tenant.
+    """
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+
+    return render(request, 'superadmin/tenant_detail.html', {
+        'tenant': tenant,
+    })
+
+@login_required
+@user_passes_test(is_superadmin)
+def delete_tenant(request, tenant_id):
+    """
+    Permanently deletes a tenant, including their PostgreSQL schema
+    and all business data within it. Requires explicit confirmation.
+    """
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+
+    if request.method == 'POST':
+        business_name = tenant.business_name
+
+        # Raw SQL delete avoids Django's cascade trying to touch
+        # tenant-schema tables (like dashboard_lead) that don't exist
+        # in the public schema context.
+        # Raw SQL delete avoids Django's cascade trying to touch
+        # tenant-schema tables (like dashboard_lead) that don't exist
+        # in the public schema context.
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM superadmin_userprofile WHERE user_id IN "
+                "(SELECT id FROM auth_user WHERE username = %s)",
+                [tenant.email]
+            )
+            cursor.execute("DELETE FROM auth_user WHERE username = %s", [tenant.email])
+
+        tenant.delete(force_drop=True)
+
+        messages.warning(request, f'{business_name} and all associated data has been permanently deleted.')
+        return redirect('superadmin:tenant_list')
+
+    return render(request, 'superadmin/delete_tenant.html', {
+        'tenant': tenant,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def revenue_report(request):
+    """
+    Shows daily/weekly/monthly revenue per tenant, plus platform-wide
+    financial summary: real IOTEC balance, commission earned,
+    tenant wallet liabilities, and pending withdrawals.
+    """
+    from django_tenants.utils import schema_context
+    from datetime import timedelta
+    from decimal import Decimal
+    from payments import iotec
+    from superadmin.models import WithdrawalRequest
+
+    now       = timezone.now()
+    today     = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago  = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+
+    tenants = Tenant.objects.exclude(schema_name='public').filter(
+        status__in=['active', 'trial']
+    )
+
+    report = []
+    commission_today = Decimal('0')
+    commission_week  = Decimal('0')
+    commission_month = Decimal('0')
+
+    for tenant in tenants:
+        with schema_context(tenant.schema_name):
+            from payments.models import Order
+
+            today_revenue = Order.objects.filter(
+                status='success', created_at__gte=today
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            week_revenue = Order.objects.filter(
+                status='success', created_at__gte=week_ago
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            month_revenue = Order.objects.filter(
+                status='success', created_at__gte=month_ago
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+        rate = tenant.commission_rate / Decimal('100')
+        commission_today += Decimal(str(today_revenue)) * rate
+        commission_week  += Decimal(str(week_revenue)) * rate
+        commission_month += Decimal(str(month_revenue)) * rate
+
+        report.append({
+            'tenant': tenant,
+            'today': today_revenue,
+            'week': week_revenue,
+            'month': month_revenue,
+        })
+
+    report.sort(key=lambda r: r['month'], reverse=True)
+
+    # ── Real IOTEC wallet balance ──────────────────────
+    iotec_balance = iotec.get_wallet_balance()
+
+    # ── Total tenant wallet liabilities ────────────────
+    total_tenant_wallets = Tenant.objects.exclude(
+        schema_name='public'
+    ).aggregate(total=Sum('wallet_balance'))['total'] or 0
+
+    # ── Pending withdrawals ─────────────────────────────
+    pending_withdrawals = WithdrawalRequest.objects.filter(
+        status='pending'
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    return render(request, 'superadmin/revenue_report.html', {
+        'report': report,
+        'commission_today': commission_today,
+        'commission_week': commission_week,
+        'commission_month': commission_month,
+        'iotec_balance': iotec_balance,
+        'total_tenant_wallets': total_tenant_wallets,
+        'pending_withdrawals': pending_withdrawals,
+    })

@@ -40,6 +40,19 @@
             <i class="bi bi-person-check-fill"></i>
             Applications
         </a>
+            <a href="{% url 'superadmin:revenue_report' %}"
+            class="nav-item {% if request.resolver_match.url_name == 'revenue_report' %}active{% endif %}">
+                <i class="bi bi-graph-up-arrow"></i>
+                Revenue Report
+            </a>
+
+             <span class="nav-label" style="margin-top:12px;">Finance</span>
+        <a href="{% url 'superadmin:withdrawal_queue' %}"
+           class="nav-item {% if request.resolver_match.url_name == 'withdrawal_queue' or request.resolver_match.url_name == 'approve_withdrawal' or request.resolver_match.url_name == 'reject_withdrawal' %}active{% endif %}">
+            <i class="bi bi-arrow-up-circle-fill"></i>
+            Withdrawals
+        </a>
+
 
         <a href="{% url 'superadmin:sms_bundles' %}"
         class="nav-item {% if request.resolver_match.url_name == 'sms_bundles' or request.resolver_match.url_name == 'create_sms_bundle' or request.resolver_match.url_name == 'edit_sms_bundle' %}active{% endif %}">
@@ -52,12 +65,7 @@
             All Tenants
         </a>
 
-        <span class="nav-label" style="margin-top:12px;">Finance</span>
-        <a href="{% url 'superadmin:withdrawal_queue' %}"
-           class="nav-item {% if request.resolver_match.url_name == 'withdrawal_queue' or request.resolver_match.url_name == 'approve_withdrawal' or request.resolver_match.url_name == 'reject_withdrawal' %}active{% endif %}">
-            <i class="bi bi-arrow-up-circle-fill"></i>
-            Withdrawals
-        </a>
+       
 
         <span class="nav-label" style="margin-top:12px;">System</span>
         <a href="{% url 'admin:index' %}" class="nav-item">

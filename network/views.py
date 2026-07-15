@@ -303,7 +303,8 @@ def register_router(request):
     """
     Called automatically by the MikroTik setup script.
     Creates or updates a router record in Django.
-    No authentication needed — called from MikroTik terminal.
+    Requires a valid tenant registration token — prevents
+    unauthorized routers from being registered into this schema.
     Matches by identity — safe to run multiple times.
     """
     if request.method != 'POST':
@@ -314,22 +315,36 @@ def register_router(request):
     except Exception:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
+    # ── Verify registration token ──────────────────────
+    provided_token = data.get('token', '').strip()
+
+    from django_tenants.utils import schema_context
+    from django.db import connection
+    from tenants.models import Tenant
+
+    current_schema = connection.schema_name
+
+    with schema_context('public'):
+        tenant = Tenant.objects.filter(schema_name=current_schema).first()
+        valid_token = tenant.router_registration_token if tenant else None
+
+    if not valid_token or provided_token != valid_token:
+        return JsonResponse({'status': 'error', 'message': 'Invalid or missing registration token'}, status=403)
+
     # ── Extract fields from script payload ─────────────
     identity      = data.get('identity', '').strip()
     location      = data.get('location', '').strip()
     ip_address    = data.get('ip_address', '').strip()
-    public_key    = data.get('public_key', '').strip()
     gateway_ip    = data.get('gateway_ip', '192.168.88.1').strip()
     api_username  = data.get('api_username', 'admin').strip()
     api_password  = data.get('api_password', '').strip()
     api_port      = int(data.get('api_port', 8728))
-    connection_type = data.get('connection_type', 'wireguard').strip()
+    connection_type = data.get('connection_type', 'direct').strip()
 
     if not identity:
         return JsonResponse({'status': 'error', 'message': 'identity is required'}, status=400)
 
     # ── Create or update router record ─────────────────
-    # Uses identity as unique key — safe to re-run script
     router, created = MikroTikRouter.objects.update_or_create(
         identity=identity,
         defaults={
@@ -343,7 +358,6 @@ def register_router(request):
         }
     )
 
-    # Only update password if provided
     if api_password:
         router.api_password = api_password
         router.save()
@@ -353,8 +367,6 @@ def register_router(request):
     print(f"\n{'='*50}")
     print(f"🔌 ROUTER {action.upper()}: {identity}")
     print(f"Location  : {location}")
-    print(f"Tunnel IP : {ip_address}")
-    print(f"Public Key: {public_key}")
     print(f"{'='*50}\n")
 
     return JsonResponse({

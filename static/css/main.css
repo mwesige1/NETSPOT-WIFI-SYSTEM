@@ -3042,3 +3042,61 @@ table { border-collapse: collapse; width: 100%; }
     opacity: 0.5;
     cursor: not-allowed;
 }
+/* ============================================
+   PUBLIC PAGES — signup, landing, standalone forms
+   ============================================ */
+.public-page-wrap {
+    min-height: 100vh;
+    width: 100%;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: var(--c-sidebar);
+}
+
+.public-form-card {
+    width: 100%;
+    max-width: 800px;
+}
+
+.public-form-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--c-primary);
+    margin-bottom: 6px;
+}
+
+.public-form-subtitle {
+    font-size: 13px;
+    color: var(--c-text-muted);
+    margin-bottom: 24px;
+}
+
+.public-back-link {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--c-text-muted);
+    text-decoration: none;
+}
+
+.public-back-link:hover {
+    color: var(--c-primary);
+}
+
+/* ============================================
+   PAGE: dashboard/force_password_change.html
+   ============================================ */
+
+.centered-form-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: 40px;
+}
+
+.centered-form-wrap .form-card {
+    width: 100%;
+    max-width: 540px;
+}

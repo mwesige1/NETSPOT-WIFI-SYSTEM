@@ -20,6 +20,17 @@ from django.db.models import Count, Sum, Q
 from django.contrib import messages
 from django.db import connection
 
+from django.http import HttpResponse
+from django_tenants.utils import schema_context
+from django.template.loader import render_to_string
+from django.conf import settings
+import uuid
+from django.urls import reverse
+
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import SetPasswordForm
+
+
 
 
 
@@ -102,8 +113,19 @@ def overview(request):
 
   
 
-    # ── Revenue Metrics ────────────────────────────────
-    today_revenue = Order.objects.filter(
+    # ── Revenue Metrics (net of commission — what tenant actually earns) ──
+    from decimal import Decimal
+
+    current_schema = connection.schema_name  # capture BEFORE switching to public
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        public_tenant = Tenant.objects.get(schema_name=current_schema)
+        commission_multiplier = (Decimal('100') - public_tenant.commission_rate) / Decimal('100')
+        momo_balance = public_tenant.wallet_balance
+        business_name = public_tenant.business_name
+
+    today_gross = Order.objects.filter(
         status='success',
         created_at__gte=today
     ).aggregate(total=Sum('amount'))['total'] or 0
@@ -113,15 +135,19 @@ def overview(request):
         created_at__gte=today
     ).count()
 
-    week_revenue = Order.objects.filter(
+    week_gross = Order.objects.filter(
         status='success',
         created_at__gte=week_ago
     ).aggregate(total=Sum('amount'))['total'] or 0
 
-    month_revenue = Order.objects.filter(
+    month_gross = Order.objects.filter(
         status='success',
         created_at__gte=month_ago
     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    today_revenue = Decimal(str(today_gross)) * commission_multiplier
+    week_revenue  = Decimal(str(week_gross)) * commission_multiplier
+    month_revenue = Decimal(str(month_gross)) * commission_multiplier
 
     # ── Session Metrics ────────────────────────────────
     active_sessions = WiFiSession.objects.filter(
@@ -170,17 +196,7 @@ def overview(request):
         status='active'
     ).order_by('-created_at')[:5]
 
-   # ── Mobile Money Balance ───────────────────────────
-    current_schema = connection.schema_name  # capture BEFORE switching to public
-
-    with schema_context('public'):
-        from tenants.models import Tenant
-        public_tenant = Tenant.objects.get(schema_name=current_schema)
-        momo_balance = public_tenant.wallet_balance
-
-    total_collected = Order.objects.filter(
-        status='success'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+ 
 
     # ── Additional Stats ───────────────────────────────
     available_vouchers = Voucher.objects.filter(
@@ -247,8 +263,8 @@ def overview(request):
         'active_packages'   : active_packages,
         'recent_orders'     : recent_orders,
         'recent_sessions'   : recent_sessions,
-        'momo_balance'      : momo_balance,
-        'total_collected'   : total_collected,
+        'business_name'     : business_name,
+        
         'now'               : now,
         'available_vouchers': available_vouchers,
         'total_equipment'   : total_equipment,
@@ -1538,6 +1554,11 @@ def routers(request):
             Q(identity__icontains=search)
         )
 
+    new_router_id = request.GET.get('new_router')
+    new_router = None
+    if new_router_id:
+        new_router = MikroTikRouter.objects.filter(id=new_router_id).first()
+
     # Annotate each router with active session count
     now = timezone.now()
     routers_qs = routers_qs.annotate(
@@ -1561,6 +1582,7 @@ def routers(request):
         'online_count' : online_count,
         'offline_count': offline_count,
         'pending_count': pending_count,
+        'new_router'   : new_router,
         'status_counts': {
             'online' : online_count,
             'offline': offline_count,
@@ -1568,37 +1590,45 @@ def routers(request):
         },
     })
 
+
+
+
+
 @login_required
 def create_router(request):
+    tenant = request.tenant
+
     if request.method == 'POST':
-        MikroTikRouter.objects.create(
-            identity            = request.POST.get('identity'),
-            location            = request.POST.get('location', ''),
-            has_wireless        = request.POST.get('has_wireless') == 'on',
-            connection_type     = request.POST.get('connection_type', 'direct'),
-            ip_address          = request.POST.get('gateway_ip') or None,
-            api_port            = request.POST.get('api_port', 8728),
-            api_username        = request.POST.get('api_username', 'admin'),
-            api_password        = request.POST.get('api_password', ''),
-            wireguard_tunnel_ip = request.POST.get('wireguard_tunnel_ip') or None,
-            hotspot_enabled     = request.POST.get('hotspot_enabled') == 'on',
-            hotspot_network     = request.POST.get('hotspot_network', '192.168.88.0/24'),
-            gateway_ip          = request.POST.get('gateway_ip', '192.168.88.1'),
-            dns_servers         = request.POST.get('dns_server', '8.8.8.8'),
-            status              = request.POST.get('status', 'pending'),
+        location  = request.POST.get('location', '').strip()
+        wifi_ssid = request.POST.get('wifi_ssid', '').strip()
+
+        from network.utils import generate_router_identity
+        identity = generate_router_identity(tenant.business_name, location)
+
+        # Avoid identity collisions within this tenant
+        if MikroTikRouter.objects.filter(identity=identity).exists():
+            identity = f"{identity}-{uuid.uuid4().hex[:4]}"
+
+        router = MikroTikRouter.objects.create(
+            identity            = identity,
+            location             = location,
+            wifi_ssid            = wifi_ssid or f"{tenant.business_name} WiFi",
+            has_wireless          = True,
+            connection_type       = 'direct',
+            ip_address            = '192.168.88.1',
+            gateway_ip            = '192.168.88.1',
+            api_port              = 8728,
+            api_username          = 'admin',
+            hotspot_enabled       = True,
+            hotspot_network       = '192.168.88.0/24',
+            dns_servers           = '8.8.8.8',
+            status                = 'pending',
         )
-        return redirect('dashboard:routers')
+        return redirect(f"{reverse('dashboard:routers')}?new_router={router.id}")
 
-    steps = [
-        (1, 'Enable API on your MikroTik via IP → Services → API'),
-        (2, 'Create a dedicated API user in System → Users with API policy only'),
-        (3, 'Enter the router gateway IP and API credentials above'),
-        (4, 'Click Provision on the router card to push hotspot configuration'),
-    ]
+    return render(request, 'dashboard/create_router.html')
 
-    return render(request, 'dashboard/create_router.html', {
-        'steps': steps,
-    })
+
 
 @login_required
 def edit_router(request, router_id):
@@ -1629,6 +1659,47 @@ def edit_router(request, router_id):
     return render(request, 'dashboard/edit_router.html', {
         'router': router,
     })
+
+
+
+
+@login_required
+def router_setup_script(request, router_id):
+    """
+    Generates a downloadable, pre-filled MikroTik provisioning script
+    for a specific router, using the tenant's real subdomain so all
+    URLs in the script correctly route to this tenant's schema.
+    """
+    router = get_object_or_404(MikroTikRouter, id=router_id)
+    tenant = request.tenant
+
+    current_schema = connection.schema_name
+
+    with schema_context('public'):
+        from tenants.models import Tenant, Domain
+
+        public_tenant = Tenant.objects.get(schema_name=current_schema)
+        domain_obj = Domain.objects.filter(tenant=public_tenant, is_primary=True).first()
+
+    portal_domain = domain_obj.domain if domain_obj else f"{current_schema}.{settings.PLATFORM_DOMAIN}"
+
+    context = {
+        'business_name': public_tenant.business_name,
+        'router_identity_raw': router.identity,
+        'router_location': router.location or router.identity,
+        'wifi_ssid': router.wifi_ssid or f"{public_tenant.business_name} WiFi",
+        'portal_domain': portal_domain,
+        'platform_domain': settings.PLATFORM_DOMAIN,
+        'registration_token': public_tenant.router_registration_token,
+    }
+
+    script_content = render_to_string('dashboard/router_script.txt', context)
+
+    response = HttpResponse(script_content, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="{router.identity}-setup.rsc"'
+    return response
+
+
 
 
 # ── Financial Analytics ────────────────────────────────────
@@ -2399,3 +2470,28 @@ def sms_bundles_view(request):
         'wallet_balance': wallet_balance,
         'sms_credits': sms_credits,
     })
+
+
+
+
+@login_required
+def force_password_change_view(request):
+    if request.method == 'POST':
+        form = SetPasswordForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+
+            profile = user.profile
+            profile.must_change_password = False
+            profile.save()
+
+            messages.success(request, 'Password updated successfully.')
+            return redirect('dashboard:overview')
+    else:
+        form = SetPasswordForm(user=request.user)
+
+    form.fields['new_password1'].widget.attrs.update({'class': 'form-input', 'placeholder': 'Enter a new password'})
+    form.fields['new_password2'].widget.attrs.update({'class': 'form-input', 'placeholder': 'Confirm new password'})
+
+    return render(request, 'dashboard/force_password_change.html', {'form': form})

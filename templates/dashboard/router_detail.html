@@ -1,15 +1,16 @@
 {% extends 'dashboard/base.html' %}
 
-{% block title %}{{ router.identity }} — Router Detail{% endblock %}
+{% block title %}{{ router.location|default:"Router" }} — Router Detail{% endblock %}
 {% block page_title %}Router Detail{% endblock %}
 
 {% block content %}
 
 <!-- ── Header ────────────────────────────────────────── -->
+<!-- ── Header ────────────────────────────────────────── -->
 <div class="page-header">
     <div>
-        <h5>{{ router.identity }}</h5>
-        <p><i class="bi bi-geo-alt-fill"></i> {{ router.location|default:"Location not set" }}</p>
+        <h5>{{ router.location|default:"Unnamed Router" }}</h5>
+        <p><i class="bi bi-router-fill"></i> {{ router.identity }}</p>
     </div>
     <div class="btn-group">
         <button onclick="refreshStats()" id="refreshBtn" class="btn-icon btn-icon-success">
@@ -24,6 +25,9 @@
                 <i class="bi bi-terminal"></i> Provision
             </button>
         </form>
+        <a href="{% url 'dashboard:router_setup_script' router.id %}" class="btn-icon btn-icon-success">
+            <i class="bi bi-download"></i> Setup Script
+        </a>
         <a href="{% url 'dashboard:edit_router' router.id %}" class="btn-icon btn-icon-warning">
             <i class="bi bi-pencil"></i> Edit
         </a>
@@ -98,7 +102,7 @@
 </div>
 
 <!-- ── Revenue Cards ─────────────────────────────────── -->
-<div class="card-grid mb-2">
+<div class="stats-row mb-2" style="grid-template-columns: repeat(3, 1fr);">
     <div class="dash-stat-card">
         <div class="dash-stat-info">
             <p>This Week</p>
@@ -132,7 +136,7 @@
 </div>
 
 <!-- ── Router Configuration ───────────────────────────── -->
-<div class="card mb-2">
+<div class="card mb-2" style="width: 100%; clear: both;">
     <h6 class="font-bold mb-2" style="color:var(--c-text);">Router Configuration</h6>
     <div class="config-grid">
         <div class="config-item">

@@ -1,0 +1,128 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Revenue Report{% endblock %}
+{% block page_title %}Revenue Report{% endblock %}
+
+{% block content %}
+
+
+<div class="grid-2 mb-2">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-success">
+            <i class="bi bi-bank"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>IOTEC Wallet Balance</p>
+            {% if iotec_balance is not None %}
+                <h4>UGX {{ iotec_balance|floatformat:0 }}</h4>
+                <small>Real balance from IOTEC</small>
+            {% else %}
+                <h4>—</h4>
+                <small class="text-danger">Could not reach IOTEC</small>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-danger">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Total Tenant Wallet Balances</p>
+            <h4>UGX {{ total_tenant_wallets|floatformat:0 }}</h4>
+            <small>Owed to tenants (not yours)</small>
+        </div>
+    </div>
+</div>
+
+<div class="stats-row mb-2">
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-primary">
+            <i class="bi bi-percent"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Commission Today</p>
+            <h4>UGX {{ commission_today|floatformat:0 }}</h4>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-primary">
+            <i class="bi bi-percent"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Commission This Week</p>
+            <h4>UGX {{ commission_week|floatformat:0 }}</h4>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-primary">
+            <i class="bi bi-percent"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Commission This Month</p>
+            <h4>UGX {{ commission_month|floatformat:0 }}</h4>
+        </div>
+    </div>
+    <div class="dash-stat-card">
+        <div class="dash-stat-icon icon-warning">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="dash-stat-info">
+            <p>Pending Withdrawals</p>
+            <h4>UGX {{ pending_withdrawals|floatformat:0 }}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="page-header">
+    <div>
+        <h5>Revenue Report</h5>
+        <p>Daily, weekly, and monthly earnings per tenant</p>
+    </div>
+</div>
+
+<div class="dash-table">
+    <div class="dash-table-header">
+        <h6>Tenant Revenue</h6>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Today</th>
+                    <th>This Week</th>
+                    <th>This Month</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report %}
+                <tr>
+                    <td>
+                        <div class="customer-cell">
+                            <div class="customer-avatar">
+                                {{ row.tenant.business_name|first|upper }}
+                            </div>
+                            <div>
+                                <p class="customer-name">{{ row.tenant.business_name }}</p>
+                                <p class="customer-sub">{{ row.tenant.get_status_display }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="font-semibold">UGX {{ row.today|floatformat:0 }}</td>
+                    <td class="font-semibold">UGX {{ row.week|floatformat:0 }}</td>
+                    <td class="font-bold" style="font-size:15px;">UGX {{ row.month|floatformat:0 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="empty-state">
+                        <p class="text-muted">No active tenants yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

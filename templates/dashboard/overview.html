@@ -15,7 +15,7 @@
             {% if hr < "12" %}Morning
             {% elif hr < "17" %}Afternoon
             {% else %}Evening{% endif %},
-            {{ request.user.get_full_name|default:request.user.username }}! 👋
+            {{ business_name }}! 👋
         </h4>
         <p class="greeting-sub">
             Here's what's happening with your WiFi network today.
@@ -67,9 +67,9 @@
             <i class="bi bi-phone-fill"></i>
         </div>
         <div class="dash-stat-info">
-            <p>MoMo Balance</p>
+            <p>Wallet Balance</p>
             <h4>UGX {{ momo_balance|floatformat:0 }}</h4>
-            <small>Collected: {{ total_collected|floatformat:0 }}</small>
+            <small>Available to withdraw</small>
         </div>
     </div>
 </div>

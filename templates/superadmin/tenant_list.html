@@ -1,135 +1,82 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Tenants — NETSPOT Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-</head>
-<body>
+{% extends 'superadmin/base.html' %}
 
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% block title %}All Tenants{% endblock %}
+{% block page_title %}All Tenants{% endblock %}
 
-<aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-        <div>
-            <div class="brand-name"><span class="brand-dot"></span>NETSPOT</div>
-            <span class="brand-sub">Platform Admin</span>
-        </div>
-        <button class="sidebar-close" id="sidebarClose"><i class="bi bi-x"></i></button>
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>All Tenants</h5>
+        <p>Manage all businesses on the NETSPOT platform</p>
     </div>
-    <nav class="sidebar-nav">
-        <a href="{% url 'superadmin:dashboard' %}" class="nav-item">
-            <i class="bi bi-grid-1x2-fill"></i>Dashboard
-        </a>
-        <span class="nav-label" style="margin-top:12px;">Tenants</span>
-        <a href="{% url 'superadmin:applications' %}" class="nav-item">
-            <i class="bi bi-person-check-fill"></i>Applications
-        </a>
-        <a href="{% url 'superadmin:tenant_list' %}" class="nav-item active">
-            <i class="bi bi-buildings-fill"></i>All Tenants
-        </a>
-        <span class="nav-label" style="margin-top:12px;">System</span>
-        <a href="{% url 'admin:index' %}" class="nav-item">
-            <i class="bi bi-gear-fill"></i>Django Admin
-        </a>
-    </nav>
-    <div class="sidebar-footer">
-        <a href="/admin/logout/" class="logout-btn">
-            <i class="bi bi-box-arrow-left"></i>Logout
-        </a>
-    </div>
-</aside>
-
-<div class="main-content">
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="hamburger" id="hamburger"><i class="bi bi-list"></i></button>
-            <div class="topbar-title">All Tenants</div>
-        </div>
-        <div class="topbar-right">
-            <div class="admin-badge">
-                <span class="admin-name">{{ request.user.username }}</span>
-                <div class="admin-avatar">{{ request.user.username|first|upper }}</div>
-            </div>
-        </div>
-    </header>
-
-    <main class="page-content">
-
-        <div class="page-header">
-            <div>
-                <h5>All Tenants</h5>
-                <p>Manage all businesses on the NETSPOT platform</p>
-            </div>
-        </div>
-
-        <div class="dash-table">
-            <div class="table-wrap">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Business</th>
-                            <th class="mobile-hide">Type</th>
-                            <th class="mobile-hide">Schema</th>
-                            <th>Status</th>
-                            <th class="mobile-hide">Trial Ends</th>
-                            <th class="mobile-hide">Commission</th>
-                            <th>Joined</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tenant in tenants %}
-                        <tr>
-                            <td class="text-muted">{{ forloop.counter }}</td>
-                            <td>
-                                <div class="customer-cell">
-                                    <div class="customer-avatar">
-                                        {{ tenant.business_name|first|upper }}
-                                    </div>
-                                    <div>
-                                        <p class="customer-name">{{ tenant.business_name }}</p>
-                                        <p class="customer-sub">{{ tenant.email }}</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="mobile-hide">{{ tenant.get_business_type_display }}</td>
-                            <td class="mobile-hide">
-                                <code style="font-size:11px;color:#6b7280;">{{ tenant.schema_name }}</code>
-                            </td>
-                            <td>
-                                <span class="badge badge-{% if tenant.status == 'active' %}success{% elif tenant.status == 'trial' %}warning{% elif tenant.status == 'suspended' %}failed{% elif tenant.status == 'awaiting_approval' %}info{% else %}muted{% endif %}">
-                                    {{ tenant.get_status_display }}
-                                </span>
-                            </td>
-                            <td class="mobile-hide text-muted">
-                                {% if tenant.trial_end %}
-                                    {{ tenant.trial_end|date:"d M Y" }}
-                                {% else %}—{% endif %}
-                            </td>
-                            <td class="mobile-hide">{{ tenant.commission_rate }}%</td>
-                            <td class="text-muted">{{ tenant.created_at|date:"d M Y" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="empty-state">
-                                <i class="bi bi-buildings"></i>
-                                <p>No tenants yet</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </main>
 </div>
 
-<script src="{% static 'js/dashboard.js' %}"></script>
-</body>
-</html>
+<div class="dash-table">
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Business</th>
+                    <th class="mobile-hide">Type</th>
+                    <th class="mobile-hide">Schema</th>
+                    <th>Status</th>
+                    <th class="mobile-hide">Trial Ends</th>
+                    <th class="mobile-hide">Commission</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tenant in tenants %}
+                <tr>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="customer-cell">
+                            <div class="customer-avatar">
+                                {{ tenant.business_name|first|upper }}
+                            </div>
+                            <div>
+                                <p class="customer-name">{{ tenant.business_name }}</p>
+                                <p class="customer-sub">{{ tenant.email }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="mobile-hide">{{ tenant.get_business_type_display }}</td>
+                    <td class="mobile-hide">
+                        <code style="font-size:11px;color:#6b7280;">{{ tenant.schema_name }}</code>
+                    </td>
+                    <td>
+                        <span class="badge badge-{% if tenant.status == 'active' %}success{% elif tenant.status == 'trial' %}warning{% elif tenant.status == 'suspended' %}failed{% elif tenant.status == 'rejected' %}failed{% else %}muted{% endif %}">
+                            {{ tenant.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="mobile-hide text-muted">
+                        {% if tenant.trial_end %}
+                            {{ tenant.trial_end|date:"d M Y" }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="mobile-hide">{{ tenant.commission_rate }}%</td>
+                    <td class="text-muted">{{ tenant.created_at|date:"d M Y" }}</td>
+                    <td>
+                        <div class="action-group">
+                            <a href="{% url 'superadmin:tenant_detail' tenant.id %}" class="btn-view">View</a>
+                            <a href="{% url 'superadmin:delete_tenant' tenant.id %}" class="btn-cut">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-state">
+                        <i class="bi bi-buildings"></i>
+                        <p>No tenants yet</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
