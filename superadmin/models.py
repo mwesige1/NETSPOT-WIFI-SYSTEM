@@ -148,3 +148,31 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} profile"
+    
+
+
+class TeamMember(models.Model):
+    OWNER = 'owner'
+    MANAGER = 'manager'
+    STAFF = 'staff'
+    ROLE_CHOICES = [
+        (OWNER, 'Owner'),
+        (MANAGER, 'Manager'),
+        (STAFF, 'Staff'),
+    ]
+
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='team_membership')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='team_members')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=STAFF)
+
+    invited_by = models.ForeignKey(
+        'auth.User', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='invited_members'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'tenant')
+
+    def __str__(self):
+        return f"{self.user.username} — {self.get_role_display()} @ {self.tenant.business_name}"

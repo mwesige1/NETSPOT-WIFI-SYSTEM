@@ -195,3 +195,50 @@ def purchase_sms_bundle(tenant, bundle_id):
         'sms_credits': tenant.sms_credits,
         'bundle': bundle,
     }
+
+
+
+# ── Role-based permission definitions ───────────────────────
+
+OWNER_ONLY = {'wallet', 'withdrawals', 'create_withdrawal', 'sms_bundles', 'settings', 'team'}
+
+MANAGER_BLOCKED = OWNER_ONLY  # Managers can't touch anything Owner-only
+
+STAFF_ALLOWED = {
+    'overview', 'active_sessions', 'customers', 'customer_detail',
+    'vouchers', 'payments', 'feedback', 'equipment',
+}
+
+
+def get_user_role(user):
+    """
+    Returns the role string for a user's team membership, or None
+    if they have no TeamMember record (e.g. legacy accounts, superusers).
+    """
+    from superadmin.models import TeamMember
+    membership = TeamMember.objects.filter(user=user).first()
+    return membership.role if membership else None
+
+
+def can_access(user, section):
+    """
+    Checks whether a user's role permits access to a given dashboard section.
+    'section' should match the keys used in OWNER_ONLY / STAFF_ALLOWED.
+    Superusers always have full access.
+    """
+    if user.is_superuser:
+        return True
+
+    role = get_user_role(user)
+
+    if role == 'owner':
+        return True
+    elif role == 'manager':
+        return section not in MANAGER_BLOCKED
+    elif role == 'staff':
+        return section in STAFF_ALLOWED
+    else:
+        # No TeamMember record — legacy/unmigrated account.
+        # Treat as Owner to avoid locking out existing tenant users
+        # who were created before this feature existed.
+        return True

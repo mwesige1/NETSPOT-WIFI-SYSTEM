@@ -554,3 +554,5 @@ def revenue_report(request):
         'total_tenant_wallets': total_tenant_wallets,
         'pending_withdrawals': pending_withdrawals,
     })
+
+

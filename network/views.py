@@ -7,6 +7,9 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, Count
 import json
+from django_tenants.utils import schema_context
+from django.db import connection
+from django.conf import settings
 
 from network.models import MikroTikRouter,RouterCommand
 from network.mikrotik import (
@@ -22,16 +25,28 @@ from network.mikrotik import (
 def router_health(request, identity):
     """
     Dual-purpose health endpoint:
-    - GET  → called by dashboard JS every 30s to display router stats
-    - POST → called by MikroTik router to report its own CPU/memory stats
+    - GET  → called by dashboard JS every 30s to display router stats (requires login)
+    - POST → called by MikroTik router to report its own CPU/memory stats (requires token)
     """
     try:
         router = get_object_or_404(MikroTikRouter, identity=identity)
 
         if request.method == 'POST':
-            # ── Router reporting its own stats ─────────
-            # MikroTik POSTs its CPU/memory to us
-            # We save them directly to the router record
+            # ── Verify registration token ──────────────
+            from django_tenants.utils import schema_context
+            from django.db import connection
+
+            provided_token = request.GET.get('token', '').strip()
+            current_schema = connection.schema_name
+
+            with schema_context('public'):
+                from tenants.models import Tenant
+                tenant = Tenant.objects.filter(schema_name=current_schema).first()
+                valid_token = tenant.router_registration_token if tenant else None
+
+            if not valid_token or provided_token != valid_token:
+                return JsonResponse({'error': 'Invalid or missing token'}, status=403)
+
             try:
                 data         = json.loads(request.body)
                 cpu_load     = float(data.get('cpu_load', 0))
@@ -51,7 +66,10 @@ def router_health(request, identity):
             except Exception as e:
                 return JsonResponse({'error': str(e)}, status=400)
 
-        # ── Dashboard requesting stats (GET) ───────────
+        # ── Dashboard requesting stats (GET) — requires login ──
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+
         return JsonResponse({
             'status'      : router.status,
             'cpu_usage'   : router.cpu_display,
@@ -381,22 +399,37 @@ def get_commands(request, router_identity):
     """
     Called by MikroTik router every 5 seconds.
     Returns a RouterOS-executable script with pending commands.
-    Router downloads and runs it directly.
-    Looks up router by identity instead of numeric ID so the
-    auto-provisioning script is fully self-contained.
+    Requires a valid tenant registration token for authentication.
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error'}, status=405)
 
     from django.http import HttpResponse
+    from django_tenants.utils import schema_context
+    from django.db import connection
+    from django.conf import settings
+
+    # ── Verify registration token ──────────────────────
+    provided_token = request.GET.get('token', '').strip()
+    current_schema = connection.schema_name
+
+    with schema_context('public'):
+        from tenants.models import Tenant, Domain
+        tenant = Tenant.objects.filter(schema_name=current_schema).first()
+        valid_token = tenant.router_registration_token if tenant else None
+        domain_obj = Domain.objects.filter(tenant__schema_name=current_schema, is_primary=True).first()
+
+    if not valid_token or provided_token != valid_token:
+        return HttpResponse('# Invalid or missing token\r\n', content_type='text/plain', status=403)
+
+    portal_domain = domain_obj.domain if domain_obj else f"{current_schema}.{settings.PLATFORM_DOMAIN}"
+    base_url = f"https://{portal_domain}"
 
     try:
         router = MikroTikRouter.objects.get(identity=router_identity)
     except MikroTikRouter.DoesNotExist:
         return HttpResponse('# Router not registered\r\n', content_type='text/plain')
 
-    # Update last_seen on every poll — used by health check
-    # This marks WireGuard/direct routers as online when they poll
     router.last_seen = timezone.now()
     router.status    = 'online'
     router.save()
@@ -407,9 +440,6 @@ def get_commands(request, router_identity):
     ).order_by('created_at')
 
     lines = []
-
-    base_url = 'https://kevidtechhotspot.com'
-    
 
     for cmd in commands:
         mac = cmd.mac_address
@@ -431,10 +461,8 @@ def get_commands(request, router_identity):
             lines.append(f':do {{ /ip hotspot ip-binding remove [find mac-address="{mac}" type=blocked] }} on-error={{}}')
 
         elif cmd.action == 'reboot':
-            # Confirm execution BEFORE rebooting since the router
-            # won't survive long enough to confirm afterward
             lines.append(
-                f'/tool fetch url="{base_url}/network/command/{cmd.id}/confirm/" '
+                f'/tool fetch url="{base_url}/network/command/{cmd.id}/confirm/?token={provided_token}" '
                 f'http-method=post '
                 f'http-header-field="Content-Type: application/json" '
                 f'http-data="{{\\\"success\\\":true}}" '
@@ -443,19 +471,15 @@ def get_commands(request, router_identity):
             lines.append(':do { /system reboot } on-error={}')
             continue
 
-        # Confirm command executed
         lines.append(
-            f'/tool fetch url="{base_url}/network/command/{cmd.id}/confirm/" '
+            f'/tool fetch url="{base_url}/network/command/{cmd.id}/confirm/?token={provided_token}" '
             f'http-method=post '
             f'http-header-field="Content-Type: application/json" '
             f'http-data="{{\\\"success\\\":true}}" '
             f'output=none'
         )
 
-        # ── Report router health stats to Django ───────────
-    # Runs on every poll regardless of pending commands
-    # Router reads its own CPU/memory and POSTs to Django
-    health_url = f'{base_url}/network/router/{router_identity}/health/'
+    health_url = f'{base_url}/network/router/{router_identity}/health/?token={provided_token}'
     lines.append(f':local cpuLoad [/system resource get cpu-load]')
     lines.append(f':local freeMem [/system resource get free-memory]')
     lines.append(f':local totalMem [/system resource get total-memory]')
@@ -478,9 +502,24 @@ def confirm_command(request, command_id):
     """
     Called by MikroTik after executing a command.
     Marks command as executed or failed.
+    Requires a valid tenant registration token.
     """
     if request.method != 'POST':
         return JsonResponse({'status': 'error'}, status=405)
+
+    from django_tenants.utils import schema_context
+    from django.db import connection
+
+    provided_token = request.GET.get('token', '').strip()
+    current_schema = connection.schema_name
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        tenant = Tenant.objects.filter(schema_name=current_schema).first()
+        valid_token = tenant.router_registration_token if tenant else None
+
+    if not valid_token or provided_token != valid_token:
+        return JsonResponse({'status': 'error', 'message': 'Invalid or missing token'}, status=403)
 
     try:
         data    = json.loads(request.body)

@@ -33,10 +33,12 @@ from django.contrib.auth.forms import SetPasswordForm
 
 
 
-
+from dashboard.decorators import require_access
 from django_tenants.utils import schema_context
 from superadmin.models import WalletTransaction
 from superadmin.utils import request_withdrawal
+import secrets
+from django.core.mail import send_mail
 
 
 # ── Authentication Views ───────────────────────────────────
@@ -50,23 +52,18 @@ def dashboard_login(request):
     Redirects to overview if already logged in.
     """
 
-    # If already logged in redirect to dashboard
     if request.user.is_authenticated:
         return redirect('dashboard:overview')
 
     error = None
 
-    # If axes redirected here after lockout, show the lockout message
     if request.GET.get('locked'):
         error = '🔒 Account locked due to too many failed attempts. Please try again in 30 minutes.'
 
     if request.method == 'POST':
-
-        # Get credentials from login form
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        # Authenticate against Django's user database
         user = authenticate(
             request,
             username=username,
@@ -83,9 +80,9 @@ def dashboard_login(request):
             error = 'Invalid username or password.'
 
     return render(request, 'dashboard/login.html', {
-        'error': error
+        'error': error,
+        'business_name': request.tenant.business_name,
     })
-
 def dashboard_logout(request):
     """
     Logs out the current admin user and
@@ -1478,11 +1475,15 @@ def messages_list(request):
 
 @login_required
 def send_message(request):
+    tenant = request.tenant
+
     if request.method == 'POST':
         channel        = request.POST.get('channel', 'SMS')
         recipient      = request.POST.get('recipient', '')
         recipient_type = request.POST.get('recipient_type', 'number')
         content        = request.POST.get('content', '')
+
+        from dashboard.utils import send_sms
 
         if recipient_type in ['all', 'active', 'expired']:
             status_map = {
@@ -1495,11 +1496,17 @@ def send_message(request):
             if status:
                 qs = qs.filter(status=status)
 
+            sent_count = 0
+            failed_count = 0
+
             for customer in qs:
-                # ── At deployment replace this with actual API call ──
-                # result     = africastalking.SMS.send(content, [customer.phone_number])
-                # msg_status = 'sent' if result['SMSMessageData']['Recipients'][0]['status'] == 'Success' else 'failed'
-                msg_status = 'sent' if customer.phone_number else 'failed'
+                result = send_sms(tenant, customer.phone_number, content)
+                msg_status = 'sent' if result['success'] else 'failed'
+
+                if result['success']:
+                    sent_count += 1
+                else:
+                    failed_count += 1
 
                 Message.objects.create(
                     channel      = channel,
@@ -1509,13 +1516,22 @@ def send_message(request):
                     sent_at      = timezone.now(),
                 )
 
+                # Stop early if credits ran out mid-batch
+                if not result['success'] and 'Insufficient' in result['message']:
+                    break
+
+            if failed_count > 0:
+                messages.warning(
+                    request,
+                    f'{sent_count} sent, {failed_count} failed. Check your SMS credit balance.'
+                )
+            else:
+                messages.success(request, f'{sent_count} message(s) sent successfully.')
+
         else:
-            # Single number
             if recipient:
-                # ── At deployment replace this with actual API call ──
-                # result     = africastalking.SMS.send(content, [recipient])
-                # msg_status = 'sent' if result['SMSMessageData']['Recipients'][0]['status'] == 'Success' else 'failed'
-                msg_status = 'sent' if recipient else 'failed'
+                result = send_sms(tenant, recipient, content)
+                msg_status = 'sent' if result['success'] else 'failed'
 
                 Message.objects.create(
                     channel      = channel,
@@ -1525,12 +1541,18 @@ def send_message(request):
                     sent_at      = timezone.now(),
                 )
 
+                if result['success']:
+                    messages.success(request, 'Message sent successfully.')
+                else:
+                    messages.error(request, result['message'])
+
         return redirect('dashboard:messages')
 
     recent_messages = Message.objects.order_by('-sent_at')[:5]
 
     return render(request, 'dashboard/send_message.html', {
         'recent_messages': recent_messages,
+        'sms_credits': tenant.sms_credits,
     })
 # ── MikroTik Routers ───────────────────────────────────────
 
@@ -2495,3 +2517,166 @@ def force_password_change_view(request):
     form.fields['new_password2'].widget.attrs.update({'class': 'form-input', 'placeholder': 'Confirm new password'})
 
     return render(request, 'dashboard/force_password_change.html', {'form': form})
+
+
+
+@login_required
+@require_access('wallet')
+def wallet_view(request):
+    ...
+
+@login_required
+@require_access('withdrawals')
+def withdrawals_view(request):
+    ...
+
+@login_required
+@require_access('create_withdrawal')
+def create_withdrawal_view(request):
+    ...
+
+@login_required
+@require_access('sms_bundles')
+def sms_bundles_view(request):
+    ...
+
+@login_required
+@require_access('settings')
+def settings_view(request):
+    ...
+
+
+
+
+@login_required
+@require_access('team')
+def team_view(request):
+    """
+    Shows all team members for this tenant, with role management.
+    Owner-only.
+    """
+    tenant = request.tenant
+
+    with schema_context('public'):
+        from tenants.models import Tenant
+        from superadmin.models import TeamMember
+
+        public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+        members = TeamMember.objects.filter(tenant=public_tenant).select_related('user').order_by('role', 'user__username')
+
+    return render(request, 'dashboard/team.html', {
+        'members': members,
+    })
+
+
+@login_required
+@require_access('team')
+def invite_team_member(request):
+    """
+    Invites a new team member — creates their User account,
+    TeamMember record with chosen role, and emails them
+    temporary credentials.
+    """
+    tenant = request.tenant
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        role = request.POST.get('role', 'staff')
+
+        if role not in ['manager', 'staff']:
+            messages.error(request, 'Invalid role selected.')
+            return redirect('dashboard:team')
+
+        from django.contrib.auth.models import User
+
+        if User.objects.filter(username=email).exists():
+            messages.error(request, f'A user with email {email} already exists.')
+            return redirect('dashboard:team')
+
+        with schema_context('public'):
+            from tenants.models import Tenant
+            from superadmin.models import TeamMember
+
+            public_tenant = Tenant.objects.get(schema_name=tenant.schema_name)
+
+            temp_password = secrets.token_urlsafe(10)
+            new_user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=temp_password,
+                is_staff=True,
+            )
+
+            TeamMember.objects.create(
+                user=new_user,
+                tenant=public_tenant,
+                role=role,
+                invited_by=request.user,
+            )
+
+            from superadmin.models import UserProfile
+            UserProfile.objects.create(user=new_user, must_change_password=True)
+
+            domain_obj = public_tenant.domains.filter(is_primary=True).first()
+            login_url = f"http://{domain_obj.domain}:{settings.PLATFORM_PORT}/dashboard/login/" if domain_obj else "#"
+
+        send_mail(
+            subject=f'You\'ve been added to {tenant.business_name} on NETSPOT',
+            message=f"""
+Hello,
+
+You've been added as a {role.title()} at {tenant.business_name}.
+
+Your dashboard: {login_url}
+
+Login credentials:
+Email: {email}
+Temporary Password: {temp_password}
+
+Please change your password after first login.
+
+— The NETSPOT Team
+            """,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        messages.success(request, f'{email} invited as {role.title()}. Credentials emailed.')
+        return redirect('dashboard:team')
+
+    return render(request, 'dashboard/invite_team_member.html')
+
+
+@login_required
+@require_access('team')
+def remove_team_member(request, member_id):
+    """
+    Removes a team member. Owners cannot be removed this way —
+    protects against accidentally locking out the real account owner.
+    """
+    with schema_context('public'):
+        from superadmin.models import TeamMember
+
+        member = get_object_or_404(TeamMember, id=member_id, tenant=request.tenant)
+
+        if member.role == 'owner':
+            messages.error(request, 'The account owner cannot be removed.')
+            return redirect('dashboard:team')
+
+        if request.method == 'POST':
+            username = member.user.username
+            user_id = member.user.id
+
+            # Raw SQL avoids Django's cascade trying to touch
+            # tenant-schema tables (like dashboard_lead) that don't
+            # exist in the public schema context.
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM superadmin_teammember WHERE user_id = %s", [user_id])
+                cursor.execute("DELETE FROM superadmin_userprofile WHERE user_id = %s", [user_id])
+                cursor.execute("DELETE FROM auth_user WHERE id = %s", [user_id])
+
+            messages.success(request, f'{username} removed from the team.')
+
+    return redirect('dashboard:team')

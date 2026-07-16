@@ -5,6 +5,39 @@
 
 {% block content %}
 
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- ── Header Row ────────────────────────────────────── -->
+<div class="page-header">
+    <div>
+        <h5>Send Message</h5>
+        <p>Send an SMS or WhatsApp message to a customer or phone number</p>
+    </div>
+    <a href="{% url 'dashboard:messages' %}" class="btn-back">← Back to Messages</a>
+</div>
+
+<div class="dash-stat-card mb-2" style="max-width:280px;">
+    <div class="dash-stat-icon {% if sms_credits <= 5 %}icon-danger{% else %}icon-primary{% endif %}">
+        <i class="bi bi-chat-dots-fill"></i>
+    </div>
+    <div class="dash-stat-info">
+        <p>SMS Credits Remaining</p>
+        <h4>{{ sms_credits }}</h4>
+        {% if sms_credits <= 5 %}
+            <small class="text-danger">
+                <a href="{% url 'dashboard:sms_bundles' %}" style="color:inherit;">Running low — buy more →</a>
+            </small>
+        {% endif %}
+    </div>
+</div>
+
 <!-- ── Header Row ────────────────────────────────────── -->
 <div class="page-header">
     <div>

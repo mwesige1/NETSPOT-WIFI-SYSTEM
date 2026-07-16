@@ -210,8 +210,10 @@
             <i class="bi bi-wifi"></i>
         </div>
         <div>
-            <span class="brand-name">Kevid WiFi</span>
+            <div>
+            <span class="brand-name">{{ business_name }}</span>
             <span class="brand-sub">Admin Dashboard</span>
+        </div>
         </div>
     </div>
 
@@ -251,9 +253,11 @@
                 <i class="bi bi-lock-fill"></i>
                 <input type="password"
                        name="password"
+                       id="passwordField"
                        placeholder="Enter your password"
                        autocomplete="current-password"
                        required>
+                <i class="bi bi-eye-fill" id="togglePassword" style="position:absolute; right:14px; left:auto; cursor:pointer;"></i>
             </div>
         </div>
 
@@ -274,6 +278,23 @@
     </div>
 
 </div>
+
+
+<script>
+document.getElementById('togglePassword').addEventListener('click', function() {
+    var field = document.getElementById('passwordField');
+    var icon = this;
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('bi-eye-fill');
+        icon.classList.add('bi-eye-slash-fill');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('bi-eye-slash-fill');
+        icon.classList.add('bi-eye-fill');
+    }
+});
+</script>
 
 </body>
 </html>

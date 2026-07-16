@@ -1,0 +1,108 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Team{% endblock %}
+{% block page_title %}Team{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h5>Team Members</h5>
+        <p>Manage who has access to your dashboard and what they can do</p>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="grid-2 mb-2">
+
+    <div class="dash-table">
+        <div class="dash-table-header">
+            <h6>Current Team</h6>
+        </div>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                    <tr>
+                        <td class="font-semibold">{{ member.user.username }}</td>
+                        <td>
+                            {% if member.role == 'owner' %}
+                                <span class="badge badge-info">Owner</span>
+                            {% elif member.role == 'manager' %}
+                                <span class="badge badge-purple">Manager</span>
+                            {% else %}
+                                <span class="badge badge-muted">Staff</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size:12px;">
+                            {{ member.created_at|date:"d M Y" }}
+                        </td>
+                        <td>
+                            {% if member.role != 'owner' %}
+                            <form method="POST" action="{% url 'dashboard:remove_team_member' member.id %}"
+                                  onsubmit="return confirm('Remove {{ member.user.username }} from the team?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-cut">Remove</button>
+                            </form>
+                            {% else %}
+                                <span class="text-muted" style="font-size:12px;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h6 class="mb-2">Invite Team Member</h6>
+        <form method="POST" action="{% url 'dashboard:invite_team_member' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Email Address <span class="required">*</span></label>
+                <input type="email" name="email" class="form-input" placeholder="staff@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Role <span class="required">*</span></label>
+                <select name="role" class="form-select" required>
+                    <option value="staff">Staff — day-to-day operations</option>
+                    <option value="manager">Manager — full operational access</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full">Send Invite</button>
+        </form>
+
+        <div class="notice-warning mt-2">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                <p class="notice-title">Role permissions</p>
+                <p class="notice-text">
+                    Managers can access most features except Wallet, Withdrawals, SMS Bundles, Settings, and Team Management.
+                    Staff can only access sessions, customers, vouchers, payments, feedback, and equipment.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -221,7 +221,7 @@
 /system script remove [find name="NetspotPoller"]
 
 /system script add name=NetspotPoller source=(\
-    ":local url \"https://" . $portalDomain . "/network/router/" . $routerIdentity . "/commands/\";" .\
+    ":local url \"https://" . $portalDomain . "/network/router/" . $routerIdentity . "/commands/?token={{ registration_token }}\";" .\
     ":do {\r\n" .\
     "/tool fetch url=\$url output=file dst-path=\"wifi-cmds.rsc\"\r\n" .\
     "/import file-name=wifi-cmds.rsc\r\n" .\

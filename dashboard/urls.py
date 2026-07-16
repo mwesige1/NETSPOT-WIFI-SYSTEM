@@ -375,4 +375,8 @@ urlpatterns = [
     path('sms-bundles/', views.sms_bundles_view, name='sms_bundles'),
 
     path('force-password-change/', views.force_password_change_view, name='force_password_change'),
+
+    path('team/', views.team_view, name='team'),
+    path('team/invite/', views.invite_team_member, name='invite_team_member'),
+    path('team/<int:member_id>/remove/', views.remove_team_member, name='remove_team_member'),
 ]
