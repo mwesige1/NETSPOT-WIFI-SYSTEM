@@ -158,6 +158,8 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 PUBLIC_SCHEMA_URLCONF  = 'netspot.urls'
 ROOT_URLCONF           = 'netspot.urls_tenant'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ── django-tenants configuration ──────────────────────
 TENANT_MODEL = "tenants.Tenant"
@@ -199,3 +201,32 @@ CSRF_TRUSTED_ORIGINS = [
 # Withdrawals below this amount are auto-approved and disbursed immediately.
 # Amounts at or above this threshold require manual super admin approval.
 AUTO_APPROVAL_WITHDRAWAL_THRESHOLD = Decimal('50000')
+
+
+
+# ── Celery Configuration ────────────────────────────
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'check-expired-sessions': {
+        'task': 'wifi_sessions.tasks.check_expired_sessions',
+        'schedule': 60.0,
+    },
+    'sync-active-sessions': {
+        'task': 'wifi_sessions.tasks.sync_active_sessions',
+        'schedule': 60.0,
+    },
+    'restore-router-rules': {
+        'task': 'wifi_sessions.tasks.restore_router_rules',
+        'schedule': 300.0,
+    },
+    'check-router-health': {
+        'task': 'wifi_sessions.tasks.check_router_health',
+        'schedule': 60.0,
+    },
+}

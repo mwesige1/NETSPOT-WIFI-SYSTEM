@@ -1371,65 +1371,50 @@ def delete_equipment(request, equipment_id):
 
 
 @login_required
+@require_access('advertisements')
 def advertisements(request):
     status_filter = request.GET.get('status', '')
 
-    ads = Advertisement.objects.all().order_by('-priority')
+    ads = Advertisement.objects.all().order_by('-created_at')
 
     if status_filter == 'active':
         ads = ads.filter(is_active=True)
     elif status_filter == 'inactive':
         ads = ads.filter(is_active=False)
 
-    total_ads         = Advertisement.objects.count()
-    active_ads        = Advertisement.objects.filter(is_active=True).count()
-    total_impressions = Advertisement.objects.aggregate(
-        total=Sum('total_impressions')
-    )['total'] or 0
-    scheduled_ads     = Advertisement.objects.filter(
-        start_date__isnull=False
-    ).count()
+    total_ads  = Advertisement.objects.count()
+    active_ads = Advertisement.objects.filter(is_active=True).count()
 
     return render(request, 'dashboard/advertisements.html', {
-        'ads'             : ads,
-        'total_ads'       : total_ads,
-        'active_ads'      : active_ads,
-        'total_impressions': total_impressions,
-        'scheduled_ads'   : scheduled_ads,
-        'status_filter'   : status_filter,
+        'ads'          : ads,
+        'total_ads'    : total_ads,
+        'active_ads'   : active_ads,
+        'status_filter': status_filter,
     })
 
+
 @login_required
+@require_access('advertisements')
 def create_advertisement(request):
     if request.method == 'POST':
-        media_file  = request.FILES.get('media_file')
-        active_days = request.POST.getlist('active_days')
+        media_file = request.FILES.get('media_file')
 
         Advertisement.objects.create(
-            title            = request.POST.get('title'),
-            ad_type          = request.POST.get('ad_type', 'banner').lower(),
-            description      = request.POST.get('description', ''),
-            is_active        = request.POST.get('is_active') == 'on',
-            media_file       = media_file,
-            click_url        = request.POST.get('click_url', ''),
-            display_duration = request.POST.get('display_duration', 10),
-            start_date       = request.POST.get('start_date') or None,
-            end_date         = request.POST.get('end_date') or None,
-            active_from      = request.POST.get('active_from') or None,
-            active_until     = request.POST.get('active_until') or None,
-            priority         = request.POST.get('priority', 1),
-            max_impressions  = request.POST.get('max_impressions') or None,
-            active_days      = active_days,
+            title       = request.POST.get('title'),
+            ad_type     = 'banner' if media_file else 'text',
+            description = request.POST.get('description', ''),
+            is_active   = request.POST.get('is_active') == 'on',
+            media_file  = media_file,
+            click_url   = request.POST.get('click_url', ''),
         )
         return redirect('dashboard:advertisements')
 
-    return render(request, 'dashboard/create_advertisement.html', {
-        'days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    })
+    return render(request, 'dashboard/create_advertisement.html')
 
 
 
 @login_required
+@require_access('advertisements')
 def delete_advertisement(request, ad_id):
     ad = get_object_or_404(Advertisement, id=ad_id)
     if request.method == 'POST':
@@ -1438,6 +1423,7 @@ def delete_advertisement(request, ad_id):
 
 
 @login_required
+@require_access('advertisements')
 def toggle_advertisement(request, ad_id):
     ad = get_object_or_404(Advertisement, id=ad_id)
     if request.method == 'POST':
@@ -1554,6 +1540,10 @@ def send_message(request):
         'recent_messages': recent_messages,
         'sms_credits': tenant.sms_credits,
     })
+
+
+
+    
 # ── MikroTik Routers ───────────────────────────────────────
 
 
@@ -2211,32 +2201,25 @@ def edit_advertisement(request, ad_id):
     ad = get_object_or_404(Advertisement, id=ad_id)
 
     if request.method == 'POST':
-        media_file  = request.FILES.get('media_file')
-        active_days = request.POST.getlist('active_days')
+        media_file = request.FILES.get('media_file')
 
-        ad.title            = request.POST.get('title', ad.title)
-        ad.ad_type          = request.POST.get('ad_type', ad.ad_type).lower()
-        ad.description      = request.POST.get('description', ad.description)
-        ad.is_active        = request.POST.get('is_active') == 'on'
-        ad.click_url        = request.POST.get('click_url', ad.click_url)
-        ad.display_duration = request.POST.get('display_duration', ad.display_duration)
-        ad.start_date       = request.POST.get('start_date') or None
-        ad.end_date         = request.POST.get('end_date') or None
-        ad.active_from      = request.POST.get('active_from') or None
-        ad.active_until     = request.POST.get('active_until') or None
-        ad.priority         = request.POST.get('priority', ad.priority)
-        ad.max_impressions  = request.POST.get('max_impressions') or None
-        ad.active_days      = active_days
+        ad.title       = request.POST.get('title', ad.title)
+        ad.description = request.POST.get('description', ad.description)
+        ad.is_active   = request.POST.get('is_active') == 'on'
+        ad.click_url   = request.POST.get('click_url', ad.click_url)
+
         if media_file:
-            ad.media_file   = media_file
+            ad.media_file = media_file
+            ad.ad_type    = 'banner'
+        elif not ad.media_file:
+            ad.ad_type = 'text'
+
         ad.save()
         return redirect('dashboard:advertisements')
 
     return render(request, 'dashboard/edit_advertisement.html', {
-        'ad'  : ad,
-        'days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'ad': ad,
     })
-
 
 
 
@@ -2567,8 +2550,6 @@ def team_view(request):
     return render(request, 'dashboard/team.html', {
         'members': members,
     })
-
-
 @login_required
 @require_access('team')
 def invite_team_member(request):
@@ -2642,6 +2623,14 @@ Please change your password after first login.
             fail_silently=False,
         )
 
+        from dashboard.utils import create_notification
+        create_notification(
+            notification_type='team',
+            title='Team Member Added',
+            message=f'{email} was added to the team as {role.title()}.',
+            link='/dashboard/team/'
+        )
+
         messages.success(request, f'{email} invited as {role.title()}. Credentials emailed.')
         return redirect('dashboard:team')
 
@@ -2667,6 +2656,8 @@ def remove_team_member(request, member_id):
         if request.method == 'POST':
             username = member.user.username
             user_id = member.user.id
+            role_display = member.get_role_display()
+            tenant_schema = request.tenant.schema_name
 
             # Raw SQL avoids Django's cascade trying to touch
             # tenant-schema tables (like dashboard_lead) that don't
@@ -2679,4 +2670,63 @@ def remove_team_member(request, member_id):
 
             messages.success(request, f'{username} removed from the team.')
 
+    # ── Notify — must happen AFTER exiting the public schema block ──
+    with schema_context(tenant_schema):
+        from dashboard.utils import create_notification
+        create_notification(
+            notification_type='team',
+            title='Team Member Removed',
+            message=f'{username} ({role_display}) was removed from the team.',
+            link='/dashboard/team/'
+        )
+
     return redirect('dashboard:team')
+
+
+
+@login_required
+def notifications_dropdown(request):
+    """
+    Returns the most recent notifications for the dropdown,
+    and the current unread count. Called via fetch/AJAX from
+    the topbar bell icon.
+    """
+    from dashboard.models import Notification
+
+    notifications = Notification.objects.all()[:10]
+    unread_count = Notification.objects.filter(is_read=False).count()
+
+    return render(request, 'dashboard/_notifications_dropdown.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """
+    Marks a single notification as read, then redirects
+    to its linked page (if any).
+    """
+    from dashboard.models import Notification
+
+    notification = get_object_or_404(Notification, id=notification_id)
+    notification.is_read = True
+    notification.save()
+
+    if notification.link:
+        return redirect(notification.link)
+    return redirect('dashboard:overview')
+
+
+@login_required
+def mark_all_notifications_read(request):
+    """
+    Marks all notifications as read at once.
+    """
+    from dashboard.models import Notification
+
+    if request.method == 'POST':
+        Notification.objects.filter(is_read=False).update(is_read=True)
+
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard:overview'))

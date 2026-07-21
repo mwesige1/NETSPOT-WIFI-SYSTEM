@@ -262,6 +262,13 @@
                 </div>
             </div>
             <div class="topbar-right">
+                <div class="notif-bell-wrap">
+                    <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifDropdown()">
+                        <i class="bi bi-bell-fill"></i>
+                        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown"></div>
+                </div>
                 <div class="admin-badge">
                     <div class="admin-avatar">
                         {{ request.user.username|first|upper }}
@@ -278,6 +285,53 @@
 
     </div>
 <script src="{% static 'js/dashboard.js' %}"></script>
+
+
+<script>
+function toggleNotifDropdown() {
+    var dropdown = document.getElementById('notifDropdown');
+    var isOpen = dropdown.classList.contains('open');
+
+    if (isOpen) {
+        dropdown.classList.remove('open');
+    } else {
+        fetch('{% url "dashboard:notifications_dropdown" %}')
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                dropdown.innerHTML = html;
+                dropdown.classList.add('open');
+            });
+    }
+}
+
+function refreshNotifBadge() {
+    fetch('{% url "dashboard:notifications_dropdown" %}')
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var temp = document.createElement('div');
+            temp.innerHTML = html;
+            var unreadCount = temp.querySelectorAll('.notif-unread').length;
+
+            var badge = document.getElementById('notifBadge');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+}
+
+document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.notif-bell-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('notifDropdown').classList.remove('open');
+    }
+});
+
+refreshNotifBadge();
+setInterval(refreshNotifBadge, 30000);
+</script>
     {% block extra_js %}{% endblock %}
 
 </body>

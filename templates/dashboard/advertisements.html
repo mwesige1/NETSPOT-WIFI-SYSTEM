@@ -9,7 +9,7 @@
 <div class="page-header">
     <div>
         <h5>Advertisements</h5>
-        <p>Manage ads displayed on the captive portal to customers</p>
+        <p>Manage promotional popups shown to customers during payment</p>
     </div>
     <a href="{% url 'dashboard:create_advertisement' %}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg"></i> Create Ad
@@ -37,26 +37,6 @@
             <h4>{{ active_ads|default:"0" }}</h4>
         </div>
     </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-icon icon-warning">
-            <i class="bi bi-eye-fill"></i>
-        </div>
-        <div class="dash-stat-info">
-            <p>Total Impressions</p>
-            <h4>{{ total_impressions|default:"0" }}</h4>
-        </div>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-icon icon-purple">
-            <i class="bi bi-calendar-event-fill"></i>
-        </div>
-        <div class="dash-stat-info">
-            <p>Scheduled</p>
-            <h4>{{ scheduled_ads|default:"0" }}</h4>
-        </div>
-    </div>
 </div>
 
 <!-- ── Filter Tabs ────────────────────────────────────── -->
@@ -82,9 +62,6 @@
                     <th class="col-preview">Preview</th>
                     <th class="col-title">Title</th>
                     <th class="col-type">Type</th>
-                    <th class="col-duration">Duration</th>
-                    <th class="col-schedule">Schedule</th>
-                    <th class="col-impressions">Impressions</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Actions</th>
                 </tr>
@@ -97,16 +74,10 @@
                     </td>
                     <td class="col-preview">
                         {% if ad.media_file %}
-                            {% if ad.ad_type == 'video' %}
-                                <video src="{{ ad.media_file.url }}"
-                                       style="width:60px; height:40px;
-                                              border-radius:6px; object-fit:cover;"></video>
-                            {% else %}
-                                <img src="{{ ad.media_file.url }}"
-                                     style="width:60px; height:40px;
-                                            border-radius:6px; object-fit:cover;"
-                                     alt="{{ ad.title }}">
-                            {% endif %}
+                            <img src="{{ ad.media_file.url }}"
+                                 style="width:60px; height:40px;
+                                        border-radius:6px; object-fit:cover;"
+                                 alt="{{ ad.title }}">
                         {% else %}
                             <div style="width:60px; height:40px; background:var(--c-border-light);
                                         border-radius:6px; display:flex;
@@ -126,24 +97,8 @@
                     </td>
                     <td class="col-type">
                         <span class="badge badge-info" style="text-transform:capitalize;">
-                            {{ ad.ad_type }}
+                            {% if ad.media_file %}Image{% else %}Text{% endif %}
                         </span>
-                    </td>
-                    <td class="col-duration">{{ ad.display_duration }}s</td>
-                    <td class="col-schedule" style="font-size:12px;">
-                        {% if ad.start_date and ad.end_date %}
-                            {{ ad.start_date|date:"d M" }} → {{ ad.end_date|date:"d M Y" }}
-                        {% else %}
-                            <span class="text-muted">Always</span>
-                        {% endif %}
-                    </td>
-                    <td class="col-impressions font-bold" style="color:var(--c-primary);">
-                        {{ ad.total_impressions|default:"0" }}
-                        {% if ad.max_impressions %}
-                        <span class="text-muted" style="font-size:11px; font-weight:400;">
-                            / {{ ad.max_impressions }}
-                        </span>
-                        {% endif %}
                     </td>
                     <td class="col-status">
                         {% if ad.is_active %}
@@ -183,13 +138,13 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="6" class="empty-state">
                         <i class="bi bi-megaphone" style="display:block;"></i>
                         <p class="font-semibold" style="color:var(--c-text-2); margin:0 0 6px;">
                             No advertisements yet
                         </p>
                         <p class="text-muted" style="font-size:13px; margin:0 0 16px;">
-                            Create ads to display on your captive portal
+                            Create ads to display during customer checkout
                         </p>
                         <a href="{% url 'dashboard:create_advertisement' %}" class="btn btn-primary btn-sm">
                             Create First Ad

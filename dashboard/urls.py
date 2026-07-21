@@ -379,4 +379,9 @@ urlpatterns = [
     path('team/', views.team_view, name='team'),
     path('team/invite/', views.invite_team_member, name='invite_team_member'),
     path('team/<int:member_id>/remove/', views.remove_team_member, name='remove_team_member'),
+
+
+    path('notifications/dropdown/', views.notifications_dropdown, name='notifications_dropdown'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 ]

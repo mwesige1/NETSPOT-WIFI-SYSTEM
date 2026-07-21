@@ -13,8 +13,8 @@ def is_superadmin(user):
     return user.is_authenticated and user.is_superuser
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def dashboard(request):
     from django_tenants.utils import schema_context
     from tenants.models import Tenant
@@ -76,8 +76,8 @@ def dashboard(request):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def applications(request):
     """
     Lists all tenant applications awaiting approval.
@@ -91,8 +91,8 @@ def applications(request):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def approve_tenant(request, tenant_id):
     """
     Approves a tenant application.
@@ -195,8 +195,8 @@ Please change your password after first login.
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def reject_tenant(request, tenant_id):
     """
     Rejects a tenant application with a reason.
@@ -239,8 +239,8 @@ You are welcome to reapply after addressing the above.
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def tenant_list(request):
     """
     Lists all tenants on the platform.
@@ -259,8 +259,8 @@ from superadmin.models import WithdrawalRequest
 from superadmin.utils import complete_withdrawal
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def withdrawal_queue(request):
     """
     Lists all withdrawal requests awaiting manual approval
@@ -284,8 +284,8 @@ def withdrawal_queue(request):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def approve_withdrawal(request, withdrawal_id):
     """
     Approves a pending withdrawal request and immediately
@@ -320,8 +320,8 @@ def approve_withdrawal(request, withdrawal_id):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def reject_withdrawal(request, withdrawal_id):
     """
     Rejects a pending withdrawal request with a reason.
@@ -338,6 +338,17 @@ def reject_withdrawal(request, withdrawal_id):
         withdrawal.failure_reason = reason or 'Rejected by admin'
         withdrawal.save()
 
+        from django_tenants.utils import schema_context
+        from dashboard.utils import create_notification
+
+        with schema_context(withdrawal.tenant.schema_name):
+            create_notification(
+                notification_type='withdrawal',
+                title='Withdrawal Rejected',
+                message=f'Your withdrawal of UGX {withdrawal.amount} was rejected: {withdrawal.failure_reason}',
+                link='/dashboard/withdrawals/'
+            )
+
         messages.warning(
             request,
             f'Withdrawal of UGX {withdrawal.amount} for {withdrawal.tenant.business_name} rejected.'
@@ -349,13 +360,11 @@ def reject_withdrawal(request, withdrawal_id):
     })
 
 
-
-
 from superadmin.models import SMSBundle
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def sms_bundles(request):
     """
     Lists all SMS bundles for management.
@@ -367,8 +376,8 @@ def sms_bundles(request):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def create_sms_bundle(request):
     """
     Creates a new SMS bundle.
@@ -387,8 +396,8 @@ def create_sms_bundle(request):
     return render(request, 'superadmin/create_sms_bundle.html')
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def edit_sms_bundle(request, bundle_id):
     """
     Edits an existing SMS bundle.
@@ -410,8 +419,8 @@ def edit_sms_bundle(request, bundle_id):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def toggle_sms_bundle(request, bundle_id):
     """
     Toggles a bundle's active status.
@@ -425,8 +434,8 @@ def toggle_sms_bundle(request, bundle_id):
     return redirect('superadmin:sms_bundles')
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def tenant_detail(request, tenant_id):
     """
     Shows full details for a single tenant.
@@ -437,8 +446,8 @@ def tenant_detail(request, tenant_id):
         'tenant': tenant,
     })
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def delete_tenant(request, tenant_id):
     """
     Permanently deletes a tenant, including their PostgreSQL schema
@@ -474,8 +483,8 @@ def delete_tenant(request, tenant_id):
     })
 
 
-@login_required
-@user_passes_test(is_superadmin)
+@login_required(login_url='/admin/login/')
+@user_passes_test(is_superadmin, login_url='/admin/login/')
 def revenue_report(request):
     """
     Shows daily/weekly/monthly revenue per tenant, plus platform-wide

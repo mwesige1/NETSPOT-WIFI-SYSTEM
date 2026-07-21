@@ -256,6 +256,38 @@
   </div>
 </div>
 
+<!-- ╔═════════════════════════════════════════
+     POPUP: Image Advertisement (shown during payment wait)
+═════════════════════════════════════════╗ -->
+{% if popup_ad %}
+<div class="modal-overlay" id="adPopup">
+  <div class="modal-sheet" style="max-width:360px;">
+    <button class="sheet-close" onclick="closeAdPopup()">✕</button>
+
+    <img src="{{ popup_ad.media_file.url }}" alt="{{ popup_ad.title }}"
+         style="width:100%; border-radius:14px; margin-bottom:14px; display:block;">
+
+    <div class="sheet-title" style="margin-bottom:6px;">{{ popup_ad.title }}</div>
+
+    {% if popup_ad.description %}
+    <p style="font-size:.85rem; color:var(--txt-muted); line-height:1.5; margin-bottom:16px;">
+        {{ popup_ad.description }}
+    </p>
+    {% endif %}
+
+    {% if popup_ad.click_url %}
+    <a href="{{ popup_ad.click_url }}" target="_blank" class="sheet-action"
+       style="display:flex; align-items:center; justify-content:center; text-decoration:none;">
+        Learn More
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+
+
+
 
 <!-- ── Floating WhatsApp Button ── -->
 <a href="https://wa.me/256773015116?text=Hello%2C%20I%20need%20help%20with%20the%20WiFi."
@@ -290,6 +322,10 @@
     if (v.length > 14) v = v.slice(0,14) + '-' + v.slice(14);
     input.value = v;
   }
+
+
+
+
 
   /* ── MODAL: Direct Purchase ── */
   function openDirectPurchaseModal(name, validity, price, packageId, isFreeStr) {
@@ -328,7 +364,14 @@
     document.getElementById('directAirtelBtn').classList.toggle('sel', provider === 'airtel');
   }
 
-  function processDirectPayment() {
+
+
+
+
+
+
+
+function processDirectPayment() {
     var priceEl = document.getElementById('directModalPrice').textContent;
     var isFree  = priceEl === 'FREE';
     var mac     = '{{ mac_address }}';
@@ -387,7 +430,9 @@
           document.getElementById('directResult').innerHTML =
             '<div class="r-info"><div>📱</div><strong>Check Your Phone</strong>Enter your PIN to confirm payment</div>';
           if (data.order_id) pollDirectStatus(data.order_id);
+          showAdPopup();
         }
+
       } else {
         document.getElementById('directResult').innerHTML =
           '<div class="r-err">❌ ' + (data.message || 'Failed. Please try again.') + '</div>';
@@ -399,6 +444,9 @@
       showToast('❌ Network error. Please try again.');
     });
   }
+
+
+
 
   function pollDirectStatus(orderId) {
     var mac = '{{ mac_address }}';
@@ -441,6 +489,11 @@
   function closeDirectModal()         { document.getElementById('directModal').classList.remove('open'); document.body.style.overflow = ''; }
   function closeDirectModalOutside(e) { if (e.target === document.getElementById('directModal')) closeDirectModal(); }
 
+  
+  
+  
+  
+  
   /* ── MODAL: Voucher Purchase ── */
   function openVoucherPurchaseModal(name, validity, price, packageId) {
     currentVoucherPackageId = packageId;
@@ -460,7 +513,11 @@
     document.getElementById('voucherAirtelBtn').classList.toggle('sel', provider === 'airtel');
   }
 
-  function processVoucherPurchase() {
+
+
+
+
+function processVoucherPurchase() {
     var phone = document.getElementById('voucherPhone').value.trim();
     if (!/^0[0-9]{9}$/.test(phone)) {
       shakeEl('voucherPhone');
@@ -490,6 +547,7 @@
 
       if (data.status === 'pending' && data.order_id) {
         pollVoucherStatus(data.order_id, phone);
+        showAdPopup();
       } else {
         document.getElementById('voucherResult').innerHTML =
           '<div class="r-err">❌ ' + (data.message || 'Purchase failed. Please try again.') + '</div>';
@@ -501,6 +559,8 @@
       showToast('❌ Network error. Please try again.');
     });
   }
+
+
 
   function pollVoucherStatus(orderId, phone) {
     document.getElementById('voucherResult').innerHTML =
@@ -604,6 +664,36 @@
     document.getElementById('quickVoucherInput').focus();
   }, 300);
   }
+
+
+  var adPopupTimer = null;
+
+  function showAdPopup() {
+    var popup = document.getElementById('adPopup');
+    if (!popup) return;
+
+    setTimeout(function() {
+        popup.classList.add('open');
+
+        adPopupTimer = setTimeout(function() {
+            closeAdPopup();
+        }, 15000);
+    }, 800);
+  }
+
+  function closeAdPopup() {
+    var popup = document.getElementById('adPopup');
+    if (popup) popup.classList.remove('open');
+    if (adPopupTimer) {
+        clearTimeout(adPopupTimer);
+        adPopupTimer = null;
+    }
+  }
+
+
+
+
+
   /* ── Quick redeem from Buy Data tab ── */
 function quickRedeemVoucher() {
   var input = document.getElementById('quickVoucherInput');

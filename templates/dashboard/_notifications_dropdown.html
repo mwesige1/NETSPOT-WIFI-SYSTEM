@@ -1,0 +1,21 @@
+<div class="notif-dropdown-header">
+    <span>Notifications</span>
+    {% if unread_count > 0 %}
+    <form method="POST" action="{% url 'dashboard:mark_all_notifications_read' %}">
+        {% csrf_token %}
+        <button type="submit" class="notif-mark-all">Mark all read</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="notif-list">
+    {% for n in notifications %}
+    <a href="{% url 'dashboard:mark_notification_read' n.id %}" class="notif-item {% if not n.is_read %}notif-unread{% endif %}">
+        <div class="notif-item-title">{{ n.title }}</div>
+        <div class="notif-item-message">{{ n.message }}</div>
+        <div class="notif-item-time">{{ n.created_at|timesince }} ago</div>
+    </a>
+    {% empty %}
+    <div class="notif-empty">No notifications yet.</div>
+    {% endfor %}
+</div>

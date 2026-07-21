@@ -114,11 +114,16 @@ def portal_landing(request):
         status='active'
     ).order_by('display_order', 'price')
 
-    # ── Fetch active advertisement ─────────────────────
+    # ── Fetch active advertisement (for the scrolling ticker) ──
     from dashboard.models import Advertisement
     active_ad = Advertisement.objects.filter(
         is_active=True
     ).order_by('-priority').first()
+
+    # ── Fetch active image ad specifically (for the popup) ─────
+    popup_ad = Advertisement.objects.filter(
+        is_active=True
+    ).exclude(media_file='').order_by('-priority').first()
 
     settings = {}
 
@@ -128,6 +133,7 @@ def portal_landing(request):
         'ip_address' : ip_address,
         'active_ad'  : active_ad,
         'settings'   : settings,
+        'popup_ad'   : popup_ad,
         'router_id'  : router.id if router else '',
     })
 

@@ -567,3 +567,30 @@ class SystemSettings(models.Model):
         """
         settings, created = cls.objects.get_or_create(id=1)
         return settings
+    
+
+
+class Notification(models.Model):
+    LOW_SMS = 'low_sms'
+    WITHDRAWAL = 'withdrawal'
+    TEAM = 'team'
+    ROUTER_OFFLINE = 'router_offline'
+    TYPE_CHOICES = [
+        (LOW_SMS, 'Low SMS Credits'),
+        (WITHDRAWAL, 'Withdrawal'),
+        (TEAM, 'Team'),
+        (ROUTER_OFFLINE, 'Router Offline'),
+    ]
+
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    message = models.CharField(max_length=500)
+    is_read = models.BooleanField(default=False)
+    link = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({'read' if self.is_read else 'unread'})"

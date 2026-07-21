@@ -95,8 +95,6 @@ def request_withdrawal(tenant, amount, phone_number, provider):
 
     return {'success': True, 'withdrawal': withdrawal}
 
-
-
 def complete_withdrawal(withdrawal):
     """
     Attempts to actually disburse a withdrawal via IOTEC.
@@ -109,6 +107,8 @@ def complete_withdrawal(withdrawal):
     and the wallet is never touched — no money was actually lost.
     """
     from payments import iotec
+    from django_tenants.utils import schema_context
+    from dashboard.utils import create_notification
 
     tenant = withdrawal.tenant
 
@@ -139,6 +139,14 @@ def complete_withdrawal(withdrawal):
         withdrawal.iotec_txn_id = result.get('reference_id', '')
         withdrawal.save()
 
+        with schema_context(tenant.schema_name):
+            create_notification(
+                notification_type='withdrawal',
+                title='Withdrawal Completed',
+                message=f'Your withdrawal of UGX {withdrawal.amount} to {withdrawal.phone_number} was completed successfully.',
+                link='/dashboard/withdrawals/'
+            )
+
         print(f"✅ Withdrawal completed for {tenant.business_name}: UGX {withdrawal.amount}")
         return {'success': True}
 
@@ -147,16 +155,21 @@ def complete_withdrawal(withdrawal):
         withdrawal.failure_reason = result.get('message', 'Disbursement failed.')
         withdrawal.save()
 
+        with schema_context(tenant.schema_name):
+            create_notification(
+                notification_type='withdrawal',
+                title='Withdrawal Failed',
+                message=f'Your withdrawal of UGX {withdrawal.amount} failed: {result.get("message", "Unknown error")}',
+                link='/dashboard/withdrawals/'
+            )
+
         print(f"❌ Withdrawal failed for {tenant.business_name}: {result.get('message')}")
         return {'success': False, 'message': result.get('message', 'Disbursement failed.')}
-    
-
 
 
 
 
 from superadmin.models import SMSBundle
-
 
 def purchase_sms_bundle(tenant, bundle_id):
     """
@@ -190,12 +203,23 @@ def purchase_sms_bundle(tenant, bundle_id):
         note=f"Purchased {bundle.name} bundle — {bundle.sms_count} SMS credits"
     )
 
+    # ── Notify if balance is still low after topping up ────
+    if tenant.sms_credits <= 10:
+        from django_tenants.utils import schema_context
+        with schema_context(tenant.schema_name):
+            from dashboard.utils import create_notification
+            create_notification(
+                notification_type='low_sms',
+                title='Low SMS Credits',
+                message=f'You have {tenant.sms_credits} SMS credits remaining. Consider buying more.',
+                link='/dashboard/sms-bundles/'
+            )
+
     return {
         'success': True,
         'sms_credits': tenant.sms_credits,
         'bundle': bundle,
     }
-
 
 
 # ── Role-based permission definitions ───────────────────────

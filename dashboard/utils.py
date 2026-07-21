@@ -37,3 +37,22 @@ def send_sms(tenant, phone_number, message_text):
         return {'success': True, 'message': 'SMS sent successfully.'}
     else:
         return {'success': False, 'message': 'SMS delivery failed. Please try again.'}
+    
+
+
+
+
+
+def create_notification(notification_type, title, message, link=''):
+    """
+    Creates a notification for the current tenant.
+    Must be called from within the correct tenant schema context.
+    """
+    from dashboard.models import Notification
+
+    Notification.objects.create(
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        link=link,
+    )
