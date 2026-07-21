@@ -13,6 +13,14 @@
     </div>
 </div>
 
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
 <!-- ── Tabs ──────────────────────────────────────────── -->
 <div class="settings-tabs">
     {% for tab in tabs %}
@@ -24,11 +32,78 @@
     {% endfor %}
 </div>
 
+<!-- ── Tab: My Account (separate forms, not part of the big settings form) ── -->
+<div id="tab-account" class="settings-tab" style="display:none;">
+    <div class="grid-2">
+
+        <div class="dash-table">
+            <div class="dash-table-header"><h6>Profile Information</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'dashboard:update_profile' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" value="{{ request.user.username }}" class="form-input" disabled>
+                        <p class="form-hint">Your login email cannot be changed here.</p>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <input type="text" name="first_name" value="{{ request.user.first_name }}" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" name="last_name" value="{{ request.user.last_name }}" class="form-input">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="dash-table">
+            <div class="dash-table-header"><h6>Change Password</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'dashboard:change_own_password' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <div style="position:relative;">
+                            <input type="password" name="old_password" id="oldPw" class="form-input" required>
+                            <i class="bi bi-eye-fill toggle-pw" data-target="oldPw"
+                               style="position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:#9ca3af;"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <div style="position:relative;">
+                            <input type="password" name="new_password1" id="newPw1" class="form-input" required>
+                            <i class="bi bi-eye-fill toggle-pw" data-target="newPw1"
+                               style="position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:#9ca3af;"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password</label>
+                        <div style="position:relative;">
+                            <input type="password" name="new_password2" id="newPw2" class="form-input" required>
+                            <i class="bi bi-eye-fill toggle-pw" data-target="newPw2"
+                               style="position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:#9ca3af;"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Main Settings Form (business/portal/network/etc) ── -->
 <form method="post" action="{% url 'dashboard:settings' %}" enctype="multipart/form-data">
     {% csrf_token %}
 
     <!-- ── Tab: General ───────────────────────────── -->
-    <div id="tab-general" class="settings-tab">
+    <div id="tab-general" class="settings-tab" style="display:none;">
         <div class="grid-8-4">
             <div>
                 <div class="dash-table">
@@ -319,12 +394,14 @@
 
 {% block extra_js %}
 <script>
-var tabIds = [{% for tab in tabs %}'{{ tab.key }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+var tabIds = ['account'{% for tab in tabs %}, '{{ tab.key }}'{% endfor %}];
 
 function switchTab(active) {
     tabIds.forEach(function(tab) {
-        document.getElementById('tab-' + tab).style.display =
-            tab === active ? 'block' : 'none';
+        var el = document.getElementById('tab-' + tab);
+        if (el) {
+            el.style.display = tab === active ? 'block' : 'none';
+        }
         var btn = document.getElementById('tab-btn-' + tab);
         if (btn) {
             btn.className = tab === active
@@ -334,10 +411,29 @@ function switchTab(active) {
     });
 }
 
+{% if request.GET.tab %}
+switchTab('{{ request.GET.tab }}');
+{% else %}
 switchTab('general');
+{% endif %}
 
 document.getElementById('colorPicker').addEventListener('input', function() {
     document.getElementById('colorHex').value = this.value;
+});
+
+document.querySelectorAll('.toggle-pw').forEach(function(icon) {
+    icon.addEventListener('click', function() {
+        var field = document.getElementById(this.dataset.target);
+        if (field.type === 'password') {
+            field.type = 'text';
+            this.classList.remove('bi-eye-fill');
+            this.classList.add('bi-eye-slash-fill');
+        } else {
+            field.type = 'password';
+            this.classList.remove('bi-eye-slash-fill');
+            this.classList.add('bi-eye-fill');
+        }
+    });
 });
 </script>
 {% endblock %}

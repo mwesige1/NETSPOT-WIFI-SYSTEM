@@ -241,6 +241,56 @@ def overview(request):
             day_labels.append('Yesterday')
         else:
             day_labels.append(day.strftime('%a %d'))
+    
+    # ── Getting Started Checklist ───────────────────────
+    has_package = Package.objects.exists()
+    has_router = MikroTikRouter.objects.exists()
+
+    with schema_context('public'):
+        from superadmin.models import UserProfile, TeamMember
+
+        password_changed = not UserProfile.objects.filter(
+            user=request.user, must_change_password=True
+        ).exists()
+
+        has_team = TeamMember.objects.filter(
+            tenant__schema_name=connection.schema_name
+        ).exclude(role='owner').exists()
+
+    checklist_items = [
+        {
+            'label': 'Add your first package',
+            'description': 'Create a WiFi package customers can purchase',
+            'done': has_package,
+            'url': 'dashboard:create_package',
+            'icon': 'bi-box-seam-fill',
+        },
+        {
+            'label': 'Add a router',
+            'description': 'Register your MikroTik router and get the setup script',
+            'done': has_router,
+            'url': 'dashboard:create_router',
+            'icon': 'bi-router-fill',
+        },
+        {
+            'label': 'Set a new password',
+            'description': 'Replace your temporary password with one only you know',
+            'done': password_changed,
+            'url': 'dashboard:force_password_change',
+            'icon': 'bi-shield-lock-fill',
+        },
+        {
+            'label': 'Invite your team',
+            'description': 'Add staff or managers to help run your dashboard',
+            'done': has_team,
+            'url': 'dashboard:team',
+            'icon': 'bi-people-fill',
+        },
+    ]
+    checklist_complete_count = sum(1 for item in checklist_items if item['done'])
+    checklist_total = len(checklist_items)
+    checklist_percent = round((checklist_complete_count / checklist_total) * 100)
+    show_checklist = checklist_complete_count < checklist_total
 
     return render(request, 'dashboard/overview.html', {
         'today_revenue'     : today_revenue,
@@ -270,6 +320,11 @@ def overview(request):
         'daily_revenue'     : json_module.dumps(daily_revenue),
         'daily_users'       : json_module.dumps(daily_users),
         'day_labels'        : json_module.dumps(day_labels),
+        'checklist_items': checklist_items,
+        'checklist_complete_count': checklist_complete_count,
+        'checklist_total': checklist_total,
+        'checklist_percent': checklist_percent,
+        'show_checklist': show_checklist,
     })
 
 # ── Sessions ───────────────────────────────────────────────
@@ -2012,6 +2067,7 @@ def settings_view(request):
         return redirect('dashboard:settings')
 
     tabs = [
+        {'key': 'account',       'label': 'My Account',    'icon': 'bi bi-person-circle'},
         {'key': 'general',       'label': 'General',       'icon': 'bi bi-gear-fill'},
         {'key': 'portal',        'label': 'Portal',         'icon': 'bi bi-window'},
         {'key': 'free_trial',    'label': 'Free Trial',     'icon': 'bi bi-gift-fill'},
@@ -2098,6 +2154,49 @@ def team_roles(request):
         'manager_permission_count': len(manager_perms),
         'staff_permission_count'  : len(staff_perms),
     })
+
+
+
+
+
+@login_required
+def update_profile(request):
+    """
+    Updates the logged-in user's own name.
+    """
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+
+        request.user.first_name = first_name
+        request.user.last_name = last_name
+        request.user.save()
+
+        messages.success(request, 'Profile updated successfully.')
+
+    return redirect(f"{reverse('dashboard:settings')}?tab=account")
+
+
+@login_required
+def change_own_password(request):
+    """
+    Lets a logged-in user voluntarily change their own password
+    (as opposed to the forced first-login password change).
+    """
+    if request.method == 'POST':
+        from django.contrib.auth.forms import PasswordChangeForm
+
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password changed successfully.')
+        else:
+            for error_list in form.errors.values():
+                for error in error_list:
+                    messages.error(request, error)
+
+    return redirect(f"{reverse('dashboard:settings')}?tab=account")
 
 @login_required
 def record_payment(request):
@@ -2500,34 +2599,6 @@ def force_password_change_view(request):
     form.fields['new_password2'].widget.attrs.update({'class': 'form-input', 'placeholder': 'Confirm new password'})
 
     return render(request, 'dashboard/force_password_change.html', {'form': form})
-
-
-
-@login_required
-@require_access('wallet')
-def wallet_view(request):
-    ...
-
-@login_required
-@require_access('withdrawals')
-def withdrawals_view(request):
-    ...
-
-@login_required
-@require_access('create_withdrawal')
-def create_withdrawal_view(request):
-    ...
-
-@login_required
-@require_access('sms_bundles')
-def sms_bundles_view(request):
-    ...
-
-@login_required
-@require_access('settings')
-def settings_view(request):
-    ...
-
 
 
 

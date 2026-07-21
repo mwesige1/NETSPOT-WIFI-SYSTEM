@@ -384,4 +384,8 @@ urlpatterns = [
     path('notifications/dropdown/', views.notifications_dropdown, name='notifications_dropdown'),
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+
+
+    path('settings/update-profile/', views.update_profile, name='update_profile'),
+    path('settings/change-password/', views.change_own_password, name='change_own_password'),
 ]

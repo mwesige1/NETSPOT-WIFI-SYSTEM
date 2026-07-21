@@ -125,7 +125,17 @@ def portal_landing(request):
         is_active=True
     ).exclude(media_file='').order_by('-priority').first()
 
-    settings = {}
+    from dashboard.models import SystemSettings
+
+    tenant_settings = SystemSettings.get_settings()
+
+    settings = {
+        'business_name': tenant_settings.business_name,
+        'logo': tenant_settings.logo.url if tenant_settings.logo else None,
+        'primary_color': tenant_settings.brand_color,
+        'welcome_message': tenant_settings.welcome_message,
+        'footer_text': tenant_settings.footer_text,
+    }
 
     return render(request, 'portal/landing.html', {
         'packages'   : packages,

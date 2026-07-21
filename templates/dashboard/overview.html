@@ -27,6 +27,49 @@
     </div>
 </div>
 
+
+
+{% if show_checklist %}
+<div class="card mb-2" style="border-left:4px solid var(--c-primary);">
+    <div class="flex-between mb-2">
+        <div>
+            <h6 style="margin:0; color:var(--c-text); font-weight:800;">Getting Started</h6>
+            <p class="text-muted" style="font-size:12px; margin:4px 0 0;">
+                Complete these steps to get your WiFi business fully set up
+            </p>
+        </div>
+        <span class="font-bold" style="font-size:13px; color:var(--c-primary);">
+            {{ checklist_complete_count }} / {{ checklist_total }}
+        </span>
+    </div>
+
+    <div style="background:var(--c-border-light); border-radius:50px; height:8px; overflow:hidden; margin-bottom:20px;">
+        <div style="background:var(--c-primary); height:100%; width:{{ checklist_percent }}%; border-radius:50px; transition:width 0.3s ease;"></div>
+    </div>
+
+    <div class="checklist-grid">
+        {% for item in checklist_items %}
+        <a href="{% url item.url %}" class="checklist-item {% if item.done %}checklist-item-done{% endif %}">
+            <div class="checklist-item-icon {% if item.done %}checklist-icon-done{% endif %}">
+                {% if item.done %}
+                    <i class="bi bi-check-lg"></i>
+                {% else %}
+                    <i class="bi {{ item.icon }}"></i>
+                {% endif %}
+            </div>
+            <div class="checklist-item-text">
+                <p class="checklist-item-label">{{ item.label }}</p>
+                <p class="checklist-item-desc">{{ item.description }}</p>
+            </div>
+            {% if not item.done %}
+            <i class="bi bi-arrow-right checklist-item-arrow"></i>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <!-- ── KPI Cards Row 1 ───────────────────────────────── -->
 <div class="card-grid mb-2">
     <div class="dash-stat-card">
