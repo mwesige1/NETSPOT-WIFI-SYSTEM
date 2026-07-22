@@ -7,6 +7,72 @@ from .models import Tenant, Domain
 from .utils import generate_schema_name
 
 
+
+
+def build_verify_url(token):
+    """
+    Builds the email verification URL, correctly handling both
+    local dev (http, explicit port) and production (https, no port).
+    """
+    domain = settings.PLATFORM_DOMAIN
+    port = settings.PLATFORM_PORT
+
+    if port:
+        return f"http://{domain}:{port}/verify-email/{token}/"
+    else:
+        return f"https://{domain}/verify-email/{token}/"
+
+
+def send_verification_email(business_name, email, verify_url, is_reapply=False):
+    """
+    Sends the verification email as both HTML (clickable link)
+    and plain text (fallback for clients that don't render HTML).
+    """
+    from django.core.mail import EmailMultiAlternatives
+
+    greeting = "Thank you for reapplying to join NETSPOT!" if is_reapply else "Thank you for applying to join NETSPOT!"
+
+    text_content = f"""
+Hello {business_name},
+
+{greeting}
+
+Please verify your email address by visiting the link below:
+
+{verify_url}
+
+This link expires in 24 hours.
+
+If you did not apply for a NETSPOT account, please ignore this email.
+
+— The NETSPOT Team
+"""
+
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1a1a2e;">Verify your NETSPOT account</h2>
+        <p>Hello {business_name},</p>
+        <p>{greeting}</p>
+        <p style="margin: 24px 0;">
+            <a href="{verify_url}" style="background: #0a0f2c; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-block;">
+                Verify My Email
+            </a>
+        </p>
+        <p style="color: #9ca3af; font-size: 13px;">This link expires in 24 hours. If you did not apply for a NETSPOT account, please ignore this email.</p>
+        <p style="color: #9ca3af; font-size: 13px;">— The NETSPOT Team</p>
+    </div>
+    """
+
+    msg = EmailMultiAlternatives(
+        subject='Verify your NETSPOT account',
+        body=text_content,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[email],
+    )
+    msg.attach_alternative(html_content, "text/html")
+    msg.send(fail_silently=False)
+
+
 def landing(request):
     """
     Main platform landing page.
@@ -51,31 +117,8 @@ def signup(request):
                 existing_tenant.verification_token = uuid.uuid4().hex
                 existing_tenant.save()
 
-                domain = settings.PLATFORM_DOMAIN
-                port   = settings.PLATFORM_PORT
-                verify_url = f"http://{domain}:{port}/verify-email/{existing_tenant.verification_token}/"
-
-                send_mail(
-                    subject    = 'Verify your NETSPOT account',
-                    message    = f"""
-Hello {business_name},
-
-Thank you for reapplying to join NETSPOT!
-
-Please verify your email address by clicking the link below:
-
-{verify_url}
-
-This link expires in 24 hours.
-
-If you did not apply for a NETSPOT account, please ignore this email.
-
-— The NETSPOT Team
-                    """,
-                    from_email = settings.DEFAULT_FROM_EMAIL,
-                    recipient_list = [email],
-                    fail_silently  = False,
-                )
+                verify_url = build_verify_url(existing_tenant.verification_token)
+                send_verification_email(business_name, email, verify_url, is_reapply=True)
 
                 messages.success(
                     request,
@@ -112,33 +155,8 @@ If you did not apply for a NETSPOT account, please ignore this email.
         tenant.auto_create_schema = False
         tenant.save()
 
-        # Build verification URL
-        domain = settings.PLATFORM_DOMAIN
-        port   = settings.PLATFORM_PORT
-        verify_url = f"http://{domain}:{port}/verify-email/{verification_token}/"
-
-        # Send verification email
-        send_mail(
-            subject    = 'Verify your NETSPOT account',
-            message    = f"""
-Hello {business_name},
-
-Thank you for applying to join NETSPOT!
-
-Please verify your email address by clicking the link below:
-
-{verify_url}
-
-This link expires in 24 hours.
-
-If you did not apply for a NETSPOT account, please ignore this email.
-
-— The NETSPOT Team
-            """,
-            from_email = settings.DEFAULT_FROM_EMAIL,
-            recipient_list = [email],
-            fail_silently  = False,
-        )
+        verify_url = build_verify_url(verification_token)
+        send_verification_email(business_name, email, verify_url, is_reapply=False)
 
         messages.success(
             request,
@@ -147,6 +165,8 @@ If you did not apply for a NETSPOT account, please ignore this email.
         return redirect('tenants:landing')
 
     return render(request, 'tenants/signup.html')
+
+
 
 def verify_email(request, token):
     

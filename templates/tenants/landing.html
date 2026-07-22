@@ -420,6 +420,16 @@
         </div>
     </nav>
 
+    {% if messages %}
+    <div style="max-width:600px; margin: 16px auto 0; padding: 0 24px;">
+        {% for message in messages %}
+        <div style="background: {% if message.tags == 'error' %}#fef2f2{% else %}#f0fdf4{% endif %}; border: 1px solid {% if message.tags == 'error' %}#fecaca{% else %}#bbf7d0{% endif %}; color: {% if message.tags == 'error' %}#dc2626{% else %}#16a34a{% endif %}; padding: 14px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; margin-bottom: 10px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <section class="hero">
         <span class="hero-badge"><i class="bi bi-stars"></i> 30-Day Free Trial — No Credit Card Required</span>
         <h1>Run your WiFi hotspot business <span>like a real platform</span></h1>
