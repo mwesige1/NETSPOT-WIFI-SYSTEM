@@ -7,3 +7,8 @@ venv/
 staticfiles/
 media/
 .DS_Store
+celerybeat-schedule
+check_*.py
+test_*.py
+*_test.py
+ads/
