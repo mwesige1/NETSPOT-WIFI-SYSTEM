@@ -41,6 +41,22 @@ import secrets
 from django.core.mail import send_mail
 
 
+
+
+
+def build_login_url(domain_str):
+    """
+    Builds a tenant's dashboard login URL, correctly handling both
+    local dev (http, explicit port) and production (https, no port).
+    """
+    port = settings.PLATFORM_PORT
+
+    if port:
+        return f"http://{domain_str}:{port}/dashboard/login/"
+    else:
+        return f"https://{domain_str}/dashboard/login/"
+
+
 # ── Authentication Views ───────────────────────────────────
 
 def dashboard_login(request):
@@ -2621,6 +2637,11 @@ def team_view(request):
     return render(request, 'dashboard/team.html', {
         'members': members,
     })
+
+
+
+
+
 @login_required
 @require_access('team')
 def invite_team_member(request):
@@ -2670,11 +2691,9 @@ def invite_team_member(request):
             UserProfile.objects.create(user=new_user, must_change_password=True)
 
             domain_obj = public_tenant.domains.filter(is_primary=True).first()
-            login_url = f"http://{domain_obj.domain}:{settings.PLATFORM_PORT}/dashboard/login/" if domain_obj else "#"
+            login_url = build_login_url(domain_obj.domain) if domain_obj else "#"
 
-        send_mail(
-            subject=f'You\'ve been added to {tenant.business_name} on NETSPOT',
-            message=f"""
+        text_content = f"""
 Hello,
 
 You've been added as a {role.title()} at {tenant.business_name}.
@@ -2688,11 +2707,34 @@ Temporary Password: {temp_password}
 Please change your password after first login.
 
 — The NETSPOT Team
-            """,
+"""
+
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <h2 style="color: #1a1a2e;">You've been added to {tenant.business_name}</h2>
+            <p>Hello,</p>
+            <p>You've been added as a <strong>{role.title()}</strong> at {tenant.business_name} on NETSPOT.</p>
+            <p style="margin: 24px 0;">
+                <a href="{login_url}" style="background: #0a0f2c; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-block;">
+                    Go to My Dashboard
+                </a>
+            </p>
+            <p><strong>Login credentials:</strong></p>
+            <p>Email: {email}<br>Temporary Password: <code>{temp_password}</code></p>
+            <p style="color: #9ca3af; font-size: 13px;">Please change your password after first login.</p>
+            <p style="color: #9ca3af; font-size: 13px;">— The NETSPOT Team</p>
+        </div>
+        """
+
+        from django.core.mail import EmailMultiAlternatives
+        msg = EmailMultiAlternatives(
+            subject=f'You\'ve been added to {tenant.business_name} on NETSPOT',
+            body=text_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
+            to=[email],
         )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
 
         from dashboard.utils import create_notification
         create_notification(

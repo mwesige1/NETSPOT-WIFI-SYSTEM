@@ -11,6 +11,20 @@ from django.contrib.auth import authenticate, login as auth_login
 
 
 
+def build_login_url(domain_str):
+    """
+    Builds a tenant's dashboard login URL, correctly handling both
+    local dev (http, explicit port) and production (https, no port).
+    """
+    port = settings.PLATFORM_PORT
+
+    if port:
+        return f"http://{domain_str}:{port}/dashboard/login/"
+    else:
+        return f"https://{domain_str}/dashboard/login/"
+
+
+
 def is_superadmin(user):
     return user.is_authenticated and user.is_superuser
 
@@ -92,7 +106,6 @@ def applications(request):
         'applications': applications,
     })
 
-
 @login_required(login_url='/superadmin/login/')
 @user_passes_test(is_superadmin, login_url='/superadmin/login/')
 def approve_tenant(request, tenant_id):
@@ -162,10 +175,9 @@ def approve_tenant(request, tenant_id):
         )
 
         # Send credentials email to tenant
-        login_url = f"http://{domain_str}:{settings.PLATFORM_PORT}/dashboard/login/"
-        send_mail(
-            subject  = 'Welcome to NETSPOT — Your account is ready!',
-            message  = f"""
+        login_url = build_login_url(domain_str)
+
+        text_content = f"""
 Hello {tenant.business_name},
 
 Congratulations! Your NETSPOT account has been approved.
@@ -180,11 +192,35 @@ Temporary Password: {temp_password}
 Please change your password after first login.
 
 — The NETSPOT Team
-            """,
-            from_email     = settings.DEFAULT_FROM_EMAIL,
-            recipient_list = [tenant.email],
-            fail_silently  = False,
+"""
+
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <h2 style="color: #1a1a2e;">Your NETSPOT account is ready!</h2>
+            <p>Hello {tenant.business_name},</p>
+            <p>Congratulations! Your NETSPOT account has been approved.</p>
+            <p><strong>Trial period:</strong> {trial_days} days</p>
+            <p style="margin: 24px 0;">
+                <a href="{login_url}" style="background: #0a0f2c; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-block;">
+                    Go to My Dashboard
+                </a>
+            </p>
+            <p><strong>Login credentials:</strong></p>
+            <p>Email: {tenant.email}<br>Temporary Password: <code>{temp_password}</code></p>
+            <p style="color: #9ca3af; font-size: 13px;">Please change your password after first login.</p>
+            <p style="color: #9ca3af; font-size: 13px;">— The NETSPOT Team</p>
+        </div>
+        """
+
+        from django.core.mail import EmailMultiAlternatives
+        msg = EmailMultiAlternatives(
+            subject='Welcome to NETSPOT — Your account is ready!',
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[tenant.email],
         )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
 
         messages.success(
             request,
@@ -196,6 +232,8 @@ Please change your password after first login.
         'tenant': tenant,
     })
 
+
+    
 
 @login_required(login_url='/superadmin/login/')
 @user_passes_test(is_superadmin, login_url='/superadmin/login/')
