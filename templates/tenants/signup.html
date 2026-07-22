@@ -1,19 +1,94 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Join NETSPOT — Start Your Free Trial</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+        :root {
+            --pub-bg: #f8fafc;
+            --pub-card: #ffffff;
+            --pub-text: #1a1a2e;
+            --pub-muted: #9ca3af;
+            --pub-border: #e8ecf0;
+            --pub-brand: #0a0f2c;
+            --pub-brand-icon: #60a5fa;
+        }
+
+        html[data-theme="dark"] {
+            --pub-bg: #0a0f1e;
+            --pub-card: #111827;
+            --pub-text: #ffffff;
+            --pub-muted: rgba(255,255,255,0.5);
+            --pub-border: rgba(255,255,255,0.08);
+            --pub-brand: #F5A623;
+            --pub-brand-icon: #0a0f1e;
+        }
+
+        body { background: var(--pub-bg) !important; transition: background 0.2s ease; }
+
+        .public-page-wrap {
+            background: var(--pub-bg) !important;
+        }
+
+        .public-form-card {
+            background: var(--pub-card) !important;
+            border: 1px solid var(--pub-border) !important;
+        }
+
+        .public-form-title, .form-label, .form-section-title {
+            color: var(--pub-text) !important;
+        }
+
+        .public-form-subtitle, .form-hint {
+            color: var(--pub-muted) !important;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            background: var(--pub-bg) !important;
+            border-color: var(--pub-border) !important;
+            color: var(--pub-text) !important;
+        }
+
+        .theme-toggle-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--pub-card);
+            border: 1px solid var(--pub-border);
+            color: var(--pub-text);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            z-index: 10;
+        }
+    </style>
 </head>
 <body>
+
+<button class="theme-toggle-fixed" id="themeToggle" onclick="toggleTheme()">
+    <i class="bi bi-moon-fill" id="themeIcon"></i>
+</button>
 
 <div class="public-page-wrap">
     <div class="form-card public-form-card">
 
-        <h1 class="public-form-title">⚡ Join NETSPOT</h1>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:var(--pub-brand); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-wifi" style="font-size:18px; color:var(--pub-brand-icon);"></i>
+            </div>
+            <span style="font-size:16px; font-weight:800; color:var(--pub-text);">NETSPOT</span>
+        </div>
+        <h1 class="public-form-title" style="font-size:22px;">Join NETSPOT</h1>
         <p class="public-form-subtitle">Start your 30-day free trial. No credit card required.</p>
 
         {% if messages %}
@@ -69,8 +144,6 @@
                 <input type="text" name="contact_person_name" class="form-input" placeholder="e.g. Jane Nakato" required>
             </div>
 
-           
-
             <div class="form-group">
                 <label class="form-label">Role <span class="required">*</span></label>
                 <select name="contact_person_role" class="form-select" required>
@@ -88,6 +161,24 @@
         <a href="{% url 'tenants:landing' %}" class="public-back-link">← Back to homepage</a>
     </div>
 </div>
+
+<script>
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('themeIcon').className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+        localStorage.setItem('netspot-theme', theme);
+    }
+
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme');
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
+    (function() {
+        var saved = localStorage.getItem('netspot-theme');
+        if (saved) applyTheme(saved);
+    })();
+</script>
 
 </body>
 </html>
