@@ -1,0 +1,90 @@
+services:
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - netspot_net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - netspot_net
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: gunicorn netspot.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+    networks:
+      - netspot_net
+
+  celery_worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A netspot worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web
+    env_file:
+      - .env
+    networks:
+      - netspot_net
+
+  celery_beat:
+    build: .
+    restart: unless-stopped
+    command: celery -A netspot beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web
+    env_file:
+      - .env
+    networks:
+      - netspot_net
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.config:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+    networks:
+      - netspot_net
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  netspot_net:
+    driver: bridge
