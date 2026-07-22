@@ -139,7 +139,7 @@ function updateTimer() {
         timerEl.className   = 'timer crit';
         barEl.style.width   = '0%';
         barEl.style.background = '#ef4444';
-        setTimeout(function() { window.location.href = 'https://kevidtechhotspot.com/'; }, 3000);
+        setTimeout(function() { window.location.href = window.location.origin + '/'; }, 3000);
         return;
     }
     var h = Math.floor(diff / 3600000);
@@ -201,13 +201,13 @@ if (ff) {
 function checkSessionStatus() {
     var mac = '{{ mac_address }}';
     if (!mac) return;
-    fetch('https://kevidtechhotspot.com/session-status/?mac=' + mac)
+    fetch(window.location.origin + '/session-status/?mac=' + mac)
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.status === 'blocked') {
-            window.location.href = 'https://kevidtechhotspot.com/blocked/?mac=' + mac;
+            window.location.href = window.location.origin + '/blocked/?mac=' + mac;
         } else if (data.status === 'expired') {
-            window.location.href = 'https://kevidtechhotspot.com/?mac=' + mac;
+            window.location.href = window.location.origin + '/?mac=' + mac;
         }
     })
     .catch(function() {});

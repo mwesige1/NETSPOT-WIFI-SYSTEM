@@ -57,7 +57,7 @@
     <div class="section-card">
       <div class="section-head">🔧 What can I do?</div>
       <div class="section-body">
-        <a href="https://kevidtechhotspot.com/" class="btn-main">🏠 Back to Portal</a>
+        <a href="{{ request.scheme }}://{{ request.get_host }}/" class="btn-main">🏠 Back to Portal</a>
         <a href="tel:{{ settings.support_phone|default:'' }}" class="btn-sec">
           📞 Call Support{% if settings.support_phone %} — {{ settings.support_phone }}{% endif %}
         </a>
@@ -93,11 +93,11 @@
 function checkBlockStatus() {
   const mac = '{{ mac_address }}';
   if (!mac) return;
-  fetch('https://kevidtechhotspot.com/session-status/?mac=' + mac)
+  fetch(window.location.origin + '/session-status/?mac=' + mac)
   .then(r => r.json())
   .then(data => {
     if (data.status !== 'blocked') {
-      window.location.href = 'https://kevidtechhotspot.com/?mac=' + mac;
+      window.location.href = window.location.origin + '/?mac=' + mac;
     }
   })
   .catch(() => {});

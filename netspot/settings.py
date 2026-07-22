@@ -185,8 +185,8 @@ IOTEC_AUTH_URL      = config('IOTEC_AUTH_URL', default='https://id.iotec.io/conn
 IOTEC_CALLBACK_URL  = config('IOTEC_CALLBACK_URL', default='')
 
 # ── Platform Settings ──────────────────────────────
-PLATFORM_DOMAIN = 'kevidtechhotspot.com'
-PLATFORM_PORT   = '8000'
+PLATFORM_DOMAIN = config('PLATFORM_DOMAIN', default='optimumtests.site')
+PLATFORM_PORT   = config('PLATFORM_PORT', default='8000')
 
 
 
@@ -194,9 +194,10 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'http://kevidtechhotspot.com:8000',
-    'http://*.kevidtechhotspot.com:8000',
+    f'http://{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
+    f'http://*.{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
 ]
+
 
 # Withdrawals below this amount are auto-approved and disbursed immediately.
 # Amounts at or above this threshold require manual super admin approval.
