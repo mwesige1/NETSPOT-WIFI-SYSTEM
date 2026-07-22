@@ -193,13 +193,22 @@ PLATFORM_PORT   = config('PLATFORM_PORT', default='8000')
 
 
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.ngrok-free.app',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    f'http://{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
-    f'http://*.{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
-]
+if PLATFORM_PORT:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.ngrok-free.app',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        f'http://{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
+        f'http://*.{PLATFORM_DOMAIN}:{PLATFORM_PORT}',
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.ngrok-free.app',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        f'https://{PLATFORM_DOMAIN}',
+        f'https://*.{PLATFORM_DOMAIN}',
+    ]
 
 
 # Withdrawals below this amount are auto-approved and disbursed immediately.
