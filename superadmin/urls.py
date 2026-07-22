@@ -24,4 +24,5 @@ urlpatterns = [
     path('tenants/<int:tenant_id>/delete/', views.delete_tenant, name='delete_tenant'),
     path('revenue/', views.revenue_report, name='revenue_report'),
     path('login/', views.superadmin_login, name='login'),
+    path('logout/', views.superadmin_logout, name='logout'),
 ]

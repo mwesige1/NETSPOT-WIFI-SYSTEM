@@ -233,7 +233,7 @@ Please change your password after first login.
     })
 
 
-    
+
 
 @login_required(login_url='/superadmin/login/')
 @user_passes_test(is_superadmin, login_url='/superadmin/login/')
@@ -631,3 +631,14 @@ def superadmin_login(request):
 
     return render(request, 'superadmin/login.html', {'error': error})
 
+
+
+from django.contrib.auth import logout as auth_logout
+
+
+def superadmin_logout(request):
+    """
+    Logs out the super admin and redirects to the branded login page.
+    """
+    auth_logout(request)
+    return redirect('superadmin:login')
