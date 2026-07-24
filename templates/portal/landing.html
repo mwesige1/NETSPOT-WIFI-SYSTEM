@@ -352,7 +352,9 @@
 
   /* ── Connecting countdown throbber ── */
   function startConnectingCountdown() {
-    // Hide the form content, show only the full takeover
+    document.querySelector('#directModal .sheet-handle').style.display = 'none';
+    document.querySelector('#directModal .sheet-close').style.display = 'none';
+    document.querySelector('#directModal .sheet-title').style.display = 'none';
     document.querySelector('#directModal .pkg-summary').style.display = 'none';
     document.querySelector('#directModal .modal-phone-label').style.display = 'none';
     document.querySelector('#directModal .phone-row').style.display = 'none';
@@ -378,6 +380,9 @@ function stopConnectingTakeover() {
     if (connectCountdownInterval) clearInterval(connectCountdownInterval);
     document.getElementById('connectingTakeover').style.display = 'none';
     document.querySelector('#directModal .modal-sheet').classList.remove('taking-over');
+    document.querySelector('#directModal .sheet-handle').style.display = '';
+    document.querySelector('#directModal .sheet-close').style.display = '';
+    document.querySelector('#directModal .sheet-title').style.display = '';
 }
 
   function pollDirectStatus(orderId) {

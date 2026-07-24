@@ -827,5 +827,11 @@ color: var(--txt);
 }
 
 #directModal .modal-sheet.taking-over {
-    min-height: 340px;
+    height: 340px;
+    max-height: 340px;
+    overflow: hidden !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
 }
