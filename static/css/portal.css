@@ -835,6 +835,6 @@ color: var(--txt);
     justify-content: center;
     padding: 0 !important;
     border: none !important;
-    background: #0a0f1e !important;
+    background: transparent !important;
     box-shadow: none !important;
 }
