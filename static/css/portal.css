@@ -811,3 +811,21 @@ color: var(--txt);
     0%   { opacity: 1; }
     100% { opacity: 0.15; }
 }
+/* ── Direct Payment Modal — always centered, not bottom-sheet ── */
+#directModal {
+    align-items: center !important;
+    padding: 16px;
+}
+
+#directModal .modal-sheet {
+    border-radius: 22px !important;
+    border: 1px solid rgba(245,166,35,.2);
+}
+
+#directModal .sheet-handle {
+    display: none;
+}
+
+#directModal .modal-sheet.taking-over {
+    min-height: 340px;
+}

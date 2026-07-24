@@ -359,6 +359,7 @@
     document.querySelector('#directModal .sheet-action').style.display = 'none';
     document.getElementById('directResult').innerHTML = '';
     document.getElementById('connectingTakeover').style.display = 'flex';
+    document.querySelector('#directModal .modal-sheet').classList.add('taking-over');
 
     var elapsed = 0;
     var totalSeconds = 60;
@@ -376,6 +377,7 @@
 function stopConnectingTakeover() {
     if (connectCountdownInterval) clearInterval(connectCountdownInterval);
     document.getElementById('connectingTakeover').style.display = 'none';
+    document.querySelector('#directModal .modal-sheet').classList.remove('taking-over');
 }
 
   function pollDirectStatus(orderId) {
