@@ -93,9 +93,9 @@
   <!-- ╔══════════ FOOTER ══════════╗ -->
   <footer class="app-footer">
     <div class="f-support">
-      <span>📞 Need help?</span>
-      <a href="tel:+256702002442" class="f-phone">+256 702 002 442</a>
-    </div>
+  <span>📞 Need help?</span>
+  <a href="tel:{{ settings.support_phone|default:'' }}" class="f-phone">{{ settings.support_phone|default:"Contact support" }}</a>
+</div>
     <div class="f-powered">
       🔒 Secure connection · Developed by @Eng.patrick
     </div>
@@ -119,12 +119,18 @@
             <div></div><div></div><div></div><div></div>
         </div>
         <div style="position:absolute; text-align:center;">
-            <div id="connectingPercent" style="font-size:1.4rem; font-weight:800; color:#fff;">0%</div>
+            <div id="connectingPercent" style="font-size:1.8rem; font-weight:900; color:#fff;">0%</div>
         </div>
         <div style="margin-top:70px; font-size:.85rem; color:rgba(255,255,255,0.6);">
             Confirm on your phone to connect
         </div>
+        <button type="button" onclick="cancelConnecting()" style="margin-top:24px; background:none; border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.6); padding:8px 20px; border-radius:60px; font-size:.78rem; font-weight:600;">
+            Cancel
+        </button>
     </div>
+
+
+
     <div class="sheet-handle"></div>
     <button class="sheet-close" onclick="closeDirectModal()">✕</button>
 
@@ -419,9 +425,12 @@ function stopConnectingTakeover() {
       }
       });
     }, 3000);
+
+    window.currentPollInterval = iv;
+
     setTimeout(function() {
        clearInterval(iv);
-       stopConnectingTakeover();
+       showTimeoutMessage();
     }, 60000);
   }
 
@@ -531,5 +540,28 @@ function stopConnectingTakeover() {
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') { closeDirectModal(); }
   });
+
+
+  function cancelConnecting() {
+    if (window.currentPollInterval) clearInterval(window.currentPollInterval);
+    stopConnectingTakeover();
+    document.getElementById('directResult').innerHTML =
+        '<div class="r-err">Payment cancelled. Select a package to try again.</div>';
+}
+
+function showTimeoutMessage() {
+    stopConnectingTakeover();
+    document.getElementById('directResult').innerHTML =
+        '<div class="r-err">⏱ We didn\'t receive your confirmation in time.<br><br>' +
+        '<button type="button" onclick="retryPayment()" style="margin-top:10px; background:linear-gradient(135deg, var(--gold), var(--gold-dark)); border:none; color:var(--navy-deep); padding:10px 24px; border-radius:60px; font-weight:700; font-size:.85rem;">Try Again</button></div>';
+}
+
+function retryPayment() {
+    document.getElementById('directResult').innerHTML = '';
+    document.querySelector('#directModal .pkg-summary').style.display = 'flex';
+    document.querySelector('#directModal .modal-phone-label').style.display = 'block';
+    document.querySelector('#directModal .phone-row').style.display = 'flex';
+    document.querySelector('#directModal .sheet-action').style.display = 'flex';
+}
 </script>
 {% endblock %}

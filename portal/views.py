@@ -173,8 +173,12 @@ def connected(request):
         except Device.DoesNotExist:
             pass
 
-    settings = {}
-
+    from dashboard.models import SystemSettings
+    tenant_settings = SystemSettings.get_settings()
+    settings = {
+        'business_name': tenant_settings.business_name,
+        'support_phone': tenant_settings.support_phone,
+    }
     return render(request, 'portal/connected.html', {
         'session'    : session,
         'mac_address': mac_address,
@@ -186,7 +190,14 @@ def blocked(request):
     """
     Page shown when a device has been blocked by admin.
     """
-    return render(request, 'portal/blocked.html')
+    from dashboard.models import SystemSettings
+    tenant_settings = SystemSettings.get_settings()
+    settings = {
+        'business_name': tenant_settings.business_name,
+        'support_phone': tenant_settings.support_phone,
+        'support_email': tenant_settings.support_email,
+    }
+    return render(request, 'portal/blocked.html', {'settings': settings})
 
 
 def submit_feedback(request):

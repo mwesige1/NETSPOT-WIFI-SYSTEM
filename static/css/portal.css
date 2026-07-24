@@ -834,4 +834,7 @@ color: var(--txt);
     align-items: center;
     justify-content: center;
     padding: 0 !important;
+    border: none !important;
+    background: #0a0f1e !important;
+    box-shadow: none !important;
 }
