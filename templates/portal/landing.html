@@ -549,7 +549,8 @@ function stopConnectingTakeover() {
     stopConnectingTakeover();
     hideModalChrome();
     document.getElementById('directResult').innerHTML =
-        '<div class="r-err">Payment cancelled. Select a package to try again.</div>';
+        '<div class="r-err">Payment cancelled.<br><br>' +
+        '<button type="button" onclick="retryPayment()" style="margin-top:10px; background:linear-gradient(135deg, var(--gold), var(--gold-dark)); border:none; color:var(--navy-deep); padding:10px 24px; border-radius:60px; font-weight:700; font-size:.85rem;">Try Again</button></div>';
 }
 
 function showTimeoutMessage() {
