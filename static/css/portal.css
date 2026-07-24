@@ -414,9 +414,11 @@ img    { max-width: 100%; height: auto; display: block; }
 .r-ok .ico  { font-size: 1.4rem; margin-bottom: 8px; }
 .r-ok .msg  { color: #22C55E; font-weight: 700; font-size: .95rem; }
 .r-ok .sub  { font-size: .75rem; margin-top: 5px; color: var(--txt-sec); }
+
+
 .r-err {
-    background: rgba(239,68,68,.1); border: 1px solid #EF4444;
-    border-radius: 14px; padding: 14px; text-align: center;
+    background: transparent; border: none;
+    padding: 14px; text-align: center;
     color: #EF4444; font-weight: 700; font-size: .85rem; margin-top: 14px;
 }
 .r-info {
