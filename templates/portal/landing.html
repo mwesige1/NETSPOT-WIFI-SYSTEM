@@ -109,6 +109,22 @@
 ═════════════════════════════════════════╗ -->
 <div class="modal-overlay" id="directModal" onclick="closeDirectModalOutside(event)">
   <div class="modal-sheet">
+
+
+
+    <div id="connectingTakeover" style="display:none; position:absolute; inset:0; background:#0a0f1e; border-radius:inherit; z-index:20; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="tick-spinner">
+            <div></div><div></div><div></div><div></div>
+            <div></div><div></div><div></div><div></div>
+            <div></div><div></div><div></div><div></div>
+        </div>
+        <div style="position:absolute; text-align:center;">
+            <div id="connectingPercent" style="font-size:1.4rem; font-weight:800; color:#fff;">0%</div>
+        </div>
+        <div style="margin-top:70px; font-size:.85rem; color:rgba(255,255,255,0.6);">
+            Confirm on your phone to connect
+        </div>
+    </div>
     <div class="sheet-handle"></div>
     <button class="sheet-close" onclick="closeDirectModal()">✕</button>
 
@@ -233,6 +249,8 @@
     document.getElementById('directModalPrice').textContent    = isFree ? 'FREE' : 'UGX ' + price;
     document.getElementById('directPhone').value               = '';
     document.getElementById('directResult').innerHTML          = '';
+    stopConnectingTakeover();
+    document.querySelector('#directModal .pkg-summary').style.display = 'flex';
 
     var phoneRowEl   = document.getElementById('directPhone').closest('.phone-row');
     var phoneLabelEl = document.querySelector('.modal-phone-label');
@@ -334,22 +352,31 @@
 
   /* ── Connecting countdown throbber ── */
   function startConnectingCountdown() {
-    var seconds = 60;
-    document.getElementById('directResult').innerHTML =
-        '<div class="r-connecting" style="text-align:center; padding:20px 0;">' +
-            '<div class="throbber-ring"></div>' +
-            '<div style="margin-top:14px; font-size:.95rem; font-weight:700; color:var(--txt);">Connecting...</div>' +
-            '<div style="margin-top:4px; font-size:.8rem; color:var(--txt-muted);">Confirm on your phone — <span id="countdownSeconds">60</span>s</div>' +
-        '</div>';
+    // Hide the form content, show only the full takeover
+    document.querySelector('#directModal .pkg-summary').style.display = 'none';
+    document.querySelector('#directModal .modal-phone-label').style.display = 'none';
+    document.querySelector('#directModal .phone-row').style.display = 'none';
+    document.querySelector('#directModal .sheet-action').style.display = 'none';
+    document.getElementById('directResult').innerHTML = '';
+    document.getElementById('connectingTakeover').style.display = 'flex';
+
+    var elapsed = 0;
+    var totalSeconds = 60;
 
     if (connectCountdownInterval) clearInterval(connectCountdownInterval);
     connectCountdownInterval = setInterval(function() {
-        seconds--;
-        var el = document.getElementById('countdownSeconds');
-        if (el) el.textContent = seconds;
-        if (seconds <= 0) clearInterval(connectCountdownInterval);
+        elapsed++;
+        var percent = Math.min(100, Math.round((elapsed / totalSeconds) * 100));
+        var el = document.getElementById('connectingPercent');
+        if (el) el.textContent = percent + '%';
+        if (elapsed >= totalSeconds) clearInterval(connectCountdownInterval);
     }, 1000);
-  }
+}
+
+function stopConnectingTakeover() {
+    if (connectCountdownInterval) clearInterval(connectCountdownInterval);
+    document.getElementById('connectingTakeover').style.display = 'none';
+}
 
   function pollDirectStatus(orderId) {
     var mac = '{{ mac_address }}';
@@ -360,7 +387,8 @@
 
         if (data.status === 'success') {
             clearInterval(iv);
-            clearInterval(connectCountdownInterval);
+            stopConnectingTakeover();
+            
             document.getElementById('directResult').innerHTML =
               '<div class="r-ok"><div class="ico">✅</div><div class="msg">Connected Successfully!</div><div class="sub">Verifying internet connection...</div></div>';
             showToast('✅ Connected! Enjoy your internet.');
@@ -378,13 +406,16 @@
 
        } else if (data.status === 'failed') {
         clearInterval(iv);
-        clearInterval(connectCountdownInterval);
+        stopConnectingTakeover();
          document.getElementById('directResult').innerHTML =
          '<div class="r-err">❌ ' + (data.message || 'Payment failed. Please try again.') + '</div>';
       }
       });
     }, 3000);
-    setTimeout(function() { clearInterval(iv); clearInterval(connectCountdownInterval); }, 60000);
+    setTimeout(function() {
+       clearInterval(iv);
+       stopConnectingTakeover();
+    }, 60000);
   }
 
   function closeDirectModal()         { document.getElementById('directModal').classList.remove('open'); document.body.style.overflow = ''; }
