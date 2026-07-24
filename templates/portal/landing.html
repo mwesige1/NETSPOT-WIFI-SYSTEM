@@ -345,8 +345,10 @@
         }
 
       } else {
+        hideModalChrome();
         document.getElementById('directResult').innerHTML =
-          '<div class="r-err">❌ ' + (data.message || 'Failed. Please try again.') + '</div>';
+          '<div class="r-err">❌ ' + (data.message || 'Failed. Please try again.') + '<br><br>' +
+          '<button type="button" onclick="retryPayment()" style="margin-top:10px; background:linear-gradient(135deg, var(--gold), var(--gold-dark)); border:none; color:var(--navy-deep); padding:10px 24px; border-radius:60px; font-weight:700; font-size:.85rem;">Try Again</button></div>';
       }
     })
     .catch(function() {
@@ -545,12 +547,14 @@ function stopConnectingTakeover() {
   function cancelConnecting() {
     if (window.currentPollInterval) clearInterval(window.currentPollInterval);
     stopConnectingTakeover();
+    hideModalChrome();
     document.getElementById('directResult').innerHTML =
         '<div class="r-err">Payment cancelled. Select a package to try again.</div>';
 }
 
 function showTimeoutMessage() {
     stopConnectingTakeover();
+    hideModalChrome();
     document.getElementById('directResult').innerHTML =
         '<div class="r-err">⏱ We didn\'t receive your confirmation in time.<br><br>' +
         '<button type="button" onclick="retryPayment()" style="margin-top:10px; background:linear-gradient(135deg, var(--gold), var(--gold-dark)); border:none; color:var(--navy-deep); padding:10px 24px; border-radius:60px; font-weight:700; font-size:.85rem;">Try Again</button></div>';
@@ -558,10 +562,29 @@ function showTimeoutMessage() {
 
 function retryPayment() {
     document.getElementById('directResult').innerHTML = '';
+    showModalChrome();
+}
+
+function hideModalChrome() {
+    document.querySelector('#directModal .sheet-handle').style.display = 'none';
+    document.querySelector('#directModal .sheet-close').style.display = 'none';
+    document.querySelector('#directModal .sheet-title').style.display = 'none';
+    document.querySelector('#directModal .pkg-summary').style.display = 'none';
+    document.querySelector('#directModal .modal-phone-label').style.display = 'none';
+    document.querySelector('#directModal .phone-row').style.display = 'none';
+    document.querySelector('#directModal .sheet-action').style.display = 'none';
+    document.querySelector('#directModal .modal-sheet').classList.add('taking-over');
+}
+
+function showModalChrome() {
+    document.querySelector('#directModal .sheet-handle').style.display = '';
+    document.querySelector('#directModal .sheet-close').style.display = '';
+    document.querySelector('#directModal .sheet-title').style.display = '';
     document.querySelector('#directModal .pkg-summary').style.display = 'flex';
     document.querySelector('#directModal .modal-phone-label').style.display = 'block';
     document.querySelector('#directModal .phone-row').style.display = 'flex';
     document.querySelector('#directModal .sheet-action').style.display = 'flex';
+    document.querySelector('#directModal .modal-sheet').classList.remove('taking-over');
 }
 </script>
 {% endblock %}
